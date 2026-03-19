@@ -1,12 +1,12 @@
 package ru.nb.neurochat
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import ru.nb.neurochat.chat.ChatScreen
+import ru.nb.neurochat.chat.presentation.ChatScreen
+import ru.nb.neurochat.designsystem.theme.NeuroChatTheme
 
 @Composable
 fun App() {
-    MaterialTheme {
+    NeuroChatTheme {
         ChatScreen()
     }
 }

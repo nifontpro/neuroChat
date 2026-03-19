@@ -1,9 +1,5 @@
 plugins {
-    id("neurochat.kmp-library")
-}
-
-android {
-    namespace = "ru.nb.neurochat.core.domain"
+    alias(libs.plugins.convention.kmp.library)
 }
 
 kotlin {

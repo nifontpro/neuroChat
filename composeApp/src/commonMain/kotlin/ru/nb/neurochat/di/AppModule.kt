@@ -1,16 +1,23 @@
 package ru.nb.neurochat.di
 
 import org.koin.core.context.startKoin
+import org.koin.core.module.Module
 import org.koin.dsl.KoinAppDeclaration
-import ru.nb.neurochat.chat.di.chatModule
-import ru.nb.neurochat.domain.model.ApiSettings
-import ru.nb.neurochat.network.di.networkModule
+import org.koin.dsl.module
+import ru.nb.neurochat.chat.presentation.di.chatModule
+import ru.nb.neurochat.data.defaultApiSettings
+import ru.nb.neurochat.data.di.dataModule
 
-fun initKoin(settings: ApiSettings, appDeclaration: KoinAppDeclaration = {}) {
+fun initKoin(
+    platformModules: Module.() -> Unit = {},
+    appDeclaration: KoinAppDeclaration = {},
+) {
+    val settings = defaultApiSettings()
     startKoin {
         appDeclaration()
         modules(
-            networkModule(settings),
+            module { platformModules() },
+            dataModule(settings),
             chatModule(settings),
         )
     }

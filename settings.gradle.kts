@@ -26,6 +26,7 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        maven(url = "https://jitpack.io")
     }
 }
 
@@ -33,7 +34,10 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
+include(":androidApp")
 include(":composeApp")
 include(":core:domain")
-include(":core:network")
-include(":feature:chat")
+include(":core:data")
+include(":core:presentation")
+include(":core:designsystem")
+include(":feature:chat:presentation")

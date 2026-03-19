@@ -4,68 +4,69 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Проект
 
-**NeuroChat** — Kotlin Multiplatform чат-бот с OpenAI-совместимым API. Поддерживает Android, iOS, Desktop (JVM). UI построен на Compose Multiplatform. Пакет: `ru.nb.neurochat`.
+**NeuroChat** — Kotlin Multiplatform чат-бот с OpenAI-совместимым API. Поддерживает Android, iOS, Desktop (JVM). UI построен на Compose Multiplatform с Material3 Adaptive. Пакет: `ru.nb.neurochat`.
 
 ## Команды
 
 ```bash
-./gradlew :composeApp:assembleDebug        # Android APK
-./gradlew :composeApp:assembleRelease
-./gradlew :composeApp:run                  # Desktop запуск
-./gradlew :composeApp:test                 # Unit тесты
-./gradlew :composeApp:lint                 # Lint
-./gradlew :core:domain:build               # Собрать отдельный модуль
+./gradlew :androidApp:assembleDebug           # Android APK
+./gradlew :androidApp:assembleRelease
+./gradlew :composeApp:run                     # Desktop запуск
+./gradlew :composeApp:compileDesktopMain      # Desktop компиляция
+./gradlew :composeApp:compileKotlinIosSimulatorArm64  # iOS компиляция
+./gradlew :core:domain:build                  # Собрать отдельный модуль
 ```
 
 ## Модульная архитектура
 
 ```
-build-logic/                  → convention plugin: neurochat.kmp-library
-                                (настраивает KMP targets для Android/iOS/JVM)
+build-logic/convention/       → Convention plugins (ru.nb.neurochat.convention.*)
+                                KmpLibrary, CmpLibrary, CmpFeature, CmpApplication,
+                                AndroidApplication, AndroidApplicationCompose, BuildKonfig
+
+androidApp/                   → Android точка входа (MainActivity, NeuroChatApp, Manifest)
+composeApp/                   → KMP shared UI + точки входа Desktop/iOS + DI init
 core/
-  domain/                     → чистые модели + интерфейсы, без зависимостей
-  network/                    → Ktor клиент + реализация IChatRepository
+  domain/                     → Чистые модели, интерфейсы, util (Result/Error/DataError)
+  data/                       → Ktor клиент, ChatRepository, ConnectivityObserver, BuildKonfig
+  presentation/               → DeviceConfiguration, ObserveAsEvents, ClearFocusOnTap
+  designsystem/               → NeuroChatTheme (Material3 light/dark)
 feature/
-  chat/                       → ChatViewModel, ChatState, ChatScreen (UI)
-composeApp/                   → точки входа + Koin DI инициализация
+  chat/presentation/          → ChatViewModel, ChatScreen (адаптивный), SettingsPanel, DI
 ```
 
-**Зависимости между модулями:**
+**Зависимости:**
 ```
-composeApp → feature:chat → core:domain
-composeApp → core:network → core:domain
+androidApp → composeApp → feature:chat:presentation → core:presentation
+                                                     → core:designsystem
+                                                     → core:domain
+                                                     → core:data → core:domain
 ```
 
 ## Ключевые паттерны
 
-**Expected/Actual для Ktor engine:** каждая платформа подключает свой engine через sourceset:
-- `androidMain` → `ktor-client-okhttp`
-- `iosMain` → `ktor-client-darwin`
-- `jvmMain` → `ktor-client-cio`
-- `commonMain` вызывает `HttpClient { }` — engine подхватывается автоматически
+**Convention Plugins (AGP 9.0):** KMP модули используют `com.android.kotlin.multiplatform.library`, androidApp — `com.android.application`. Desktop target: `jvm("desktop")` → `desktopMain`.
 
-**DI (Koin):** инициализируется один раз в платформенной точке входа:
-- Android: `MainActivity.onCreate()` с `androidContext()`
-- Desktop: перед `application { }`
-- iOS: перед `ComposeUIViewController`
+**Adaptive Layout:** `DeviceConfiguration` определяет тип устройства из `WindowSizeClass`. На desktop/tablet landscape — `Row(SettingsPanel | Chat)`, на mobile — `ModalBottomSheet` для настроек.
 
-**Streaming:** `OpenAiClient.chatStream()` возвращает `Flow<StreamToken>` — SSE парсинг через Ktor channel. `ChatViewModel` накапливает токены в последнее сообщение ассистента.
+**ConnectivityObserver (expect/actual):**
+- Android: `ConnectivityManager.NetworkCallback`
+- iOS: `nw_path_monitor`
+- Desktop: polling DNS (8.8.8.8, 1.1.1.1)
 
-**Настройки API:** `ApiSettings` задаётся в `composeApp/di/AppModule.kt` → `defaultSettings`. Это временное решение, будет вынесено в экран Settings.
+**BuildKonfig:** Читает `litellm.properties` при сборке → генерирует API_KEY, BASE_URL, MODEL, TIMEOUT_SECONDS. Public accessor: `ru.nb.neurochat.data.defaultApiSettings()`.
+
+**DI (Koin):** `initKoin()` в composeApp принимает `platformModules` lambda для platform-specific DI (ConnectivityObserver). Вызывается в NeuroChatApp (Android), main.kt (Desktop), MainViewController (iOS).
+
+**Ktor engine:** `androidMain` → okhttp, `iosMain` → darwin, `desktopMain` → cio.
+
+**Streaming:** `OpenAiClient.chatStream()` → `Flow<StreamToken>` через SSE. `ChatViewModel` накапливает токены.
 
 ## Технологический стек
 
-- **Kotlin** 2.3.0, **Compose Multiplatform** 1.10.0, **Material3**
-- **Ktor** 3.1.3 — HTTP клиент
-- **kotlinx.serialization** 1.9.0 — JSON
-- **Koin** 4.0.0 — DI
-- **Android:** compileSdk/targetSdk 36, minSdk 26, Java 11
-- **AGP** 8.11.2, **Gradle** 8.14.3
+- **Kotlin** 2.3.10, **Compose Multiplatform** 1.10.1, **Material3 Adaptive** 1.2.0
+- **Ktor** 3.4.0, **kotlinx.serialization** 1.10.0, **Koin** 4.1.1
+- **Kermit** 2.0.8 — логирование
+- **Android:** compileSdk/targetSdk 36, minSdk 26, Java 17
+- **AGP** 9.0.1, **KSP** 2.3.4
 - Зависимости: `gradle/libs.versions.toml`
-
-## Gradle properties
-
-В `gradle.properties` включены:
-- `org.gradle.configuration-cache=true`
-- `org.gradle.caching=true`
-- `org.gradle.jvmargs=-Xmx4096M`
