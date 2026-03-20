@@ -1,6 +1,6 @@
 package ru.nb.neurochat.chat.presentation.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,10 +9,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -30,137 +35,160 @@ import ru.nb.neurochat.chat.presentation.ChatAction
 import ru.nb.neurochat.chat.presentation.ChatState
 import ru.nb.neurochat.domain.model.AVAILABLE_MODELS
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsPanel(
     state: ChatState,
     onAction: (ChatAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = isSystemInDarkTheme()
+    val panelColor = if (isDark)
+        MaterialTheme.colorScheme.surfaceContainerLowest
+    else
+        MaterialTheme.colorScheme.surfaceContainerHigh
+
+    val contentColor = MaterialTheme.colorScheme.onSurface
+
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+        color = panelColor,
+        contentColor = contentColor,
     ) {
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item {
-                Text(
-                    text = "Настройки",
-                    style = MaterialTheme.typography.titleLarge,
-                )
-            }
+            Text(
+                text = "Настройки",
+                style = MaterialTheme.typography.titleLarge,
+                color = contentColor,
+            )
 
             // Connection status
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Text(
+                text = if (state.isConnected) "● Онлайн" else "● Нет сети",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (state.isConnected)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.error,
+            )
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            // Model dropdown
+            Text(
+                text = "Модель",
+                style = MaterialTheme.typography.titleSmall,
+                color = contentColor,
+            )
+
+            var expanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+            ) {
+                OutlinedTextField(
+                    value = state.currentModel,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                        .fillMaxWidth(),
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
                 ) {
-                    Text(
-                        text = if (state.isConnected) "Онлайн" else "Нет сети",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (state.isConnected)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.error,
-                    )
+                    AVAILABLE_MODELS.forEach { model ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = model,
+                                    color = if (model == state.currentModel)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurface,
+                                )
+                            },
+                            onClick = {
+                                onAction(ChatAction.OnSelectModel(model))
+                                expanded = false
+                            },
+                        )
+                    }
                 }
             }
 
-            item { HorizontalDivider() }
-
-            // Model selection
-            item {
-                Text(
-                    text = "Модель",
-                    style = MaterialTheme.typography.titleSmall,
-                )
-            }
-
-            items(AVAILABLE_MODELS) { model ->
-                val isSelected = model == state.currentModel
-                Text(
-                    text = model,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isSelected)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onAction(ChatAction.OnSelectModel(model)) }
-                        .padding(vertical = 6.dp, horizontal = 4.dp),
-                )
-            }
-
-            item { HorizontalDivider() }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             // Temperature
-            item {
-                Column {
-                    Text(
-                        text = "Температура: ${state.currentTemperature?.let { ((it * 10).toInt() / 10.0).toString() } ?: "по умолчанию"}",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Slider(
-                        value = (state.currentTemperature ?: 0.7).toFloat(),
-                        onValueChange = { onAction(ChatAction.OnTemperatureChange(it.toDouble())) },
-                        valueRange = 0f..2f,
-                        steps = 19,
-                    )
-                }
+            Column {
+                Text(
+                    text = "Температура: ${state.currentTemperature?.let { ((it * 10).toInt() / 10.0) } ?: "по умолчанию"}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = contentColor,
+                )
+                Spacer(Modifier.height(4.dp))
+                Slider(
+                    value = (state.currentTemperature ?: 0.7).toFloat(),
+                    onValueChange = { onAction(ChatAction.OnTemperatureChange(it.toDouble())) },
+                    valueRange = 0f..2f,
+                    steps = 19,
+                )
             }
 
-            item { HorizontalDivider() }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             // Thinking mode
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = "Режим мышления",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Switch(
-                        checked = state.thinkingEnabled,
-                        onCheckedChange = { onAction(ChatAction.OnThinkingToggle(it)) },
-                    )
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "Режим мышления",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = contentColor,
+                )
+                Switch(
+                    checked = state.thinkingEnabled,
+                    onCheckedChange = { onAction(ChatAction.OnThinkingToggle(it)) },
+                )
             }
 
-            item { HorizontalDivider() }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
             // System prompt
-            item {
-                var promptText by remember(state.systemPrompt) {
-                    mutableStateOf(state.systemPrompt ?: "")
-                }
-                Column {
-                    Text(
-                        text = "Системный промпт",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = promptText,
-                        onValueChange = {
-                            promptText = it
-                            onAction(ChatAction.OnSystemPromptChange(it.ifBlank { null }))
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
-                        maxLines = 6,
-                        placeholder = { Text("Ты умный ассистент...") },
-                    )
-                }
+            var promptText by remember(state.systemPrompt) {
+                mutableStateOf(state.systemPrompt ?: "")
+            }
+            Column {
+                Text(
+                    text = "Системный промпт",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = contentColor,
+                )
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = promptText,
+                    onValueChange = {
+                        promptText = it
+                        onAction(ChatAction.OnSystemPromptChange(it.ifBlank { null }))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 6,
+                    placeholder = { Text("Ты умный ассистент...") },
+                )
             }
         }
     }
