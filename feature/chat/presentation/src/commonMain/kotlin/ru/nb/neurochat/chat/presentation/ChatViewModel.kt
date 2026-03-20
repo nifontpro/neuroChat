@@ -3,10 +3,13 @@ package ru.nb.neurochat.chat.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ru.nb.neurochat.data.connectivity.ConnectivityObserver
@@ -16,12 +19,15 @@ import ru.nb.neurochat.domain.model.ChatRole
 import ru.nb.neurochat.domain.repository.IChatRepository
 
 class ChatViewModel(
+    baseSettings: ApiSettings,
     private val repository: IChatRepository,
-    private val baseSettings: ApiSettings,
-    connectivityObserver: ConnectivityObserver,
+    private val connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 
     private var currentSettings = baseSettings
+
+    private val eventChannel = Channel<ChatEvent>()
+    val events = eventChannel.receiveAsFlow()
 
     private val _state = MutableStateFlow(
         ChatState(
@@ -31,11 +37,39 @@ class ChatViewModel(
             systemPrompt = baseSettings.systemPrompt,
         )
     )
-    val state: StateFlow<ChatState> = _state.asStateFlow()
+
+    val state = _state
+        .onStart { observeConnectivity() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000L),
+            initialValue = _state.value,
+        )
 
     private var streamingJob: Job? = null
 
-    init {
+    fun onAction(action: ChatAction) {
+        when (action) {
+            is ChatAction.OnInputChange -> {
+                _state.update { it.copy(inputText = action.text) }
+            }
+            ChatAction.OnSendMessage -> sendMessage()
+            ChatAction.OnStopStreaming -> stopStreaming()
+            ChatAction.OnClearHistory -> clearHistory()
+            ChatAction.OnSettingsClick -> {
+                _state.update { it.copy(isSettingsOpen = true) }
+            }
+            ChatAction.OnDismissSettings -> {
+                _state.update { it.copy(isSettingsOpen = false) }
+            }
+            is ChatAction.OnSelectModel -> selectModel(action.model)
+            is ChatAction.OnTemperatureChange -> updateTemperature(action.temperature)
+            is ChatAction.OnThinkingToggle -> toggleThinking(action.enabled)
+            is ChatAction.OnSystemPromptChange -> updateSystemPrompt(action.prompt)
+        }
+    }
+
+    private fun observeConnectivity() {
         viewModelScope.launch {
             connectivityObserver.isConnected.collect { connected ->
                 _state.update { it.copy(isConnected = connected) }
@@ -43,11 +77,7 @@ class ChatViewModel(
         }
     }
 
-    fun onInputChange(text: String) {
-        _state.update { it.copy(inputText = text) }
-    }
-
-    fun sendMessage() {
+    private fun sendMessage() {
         val text = _state.value.inputText.trim()
         if (text.isBlank() || _state.value.isLoading) return
 
@@ -77,6 +107,7 @@ class ChatViewModel(
             repository.streamMessage(history, currentSettings)
                 .catch { e ->
                     _state.update { it.copy(isLoading = false, error = e.message) }
+                    eventChannel.send(ChatEvent.OnError(e.message ?: "Неизвестная ошибка"))
                 }
                 .collect { token ->
                     if (!token.isThinking) {
@@ -164,34 +195,34 @@ class ChatViewModel(
         }
     }
 
-    fun selectModel(model: String) {
+    private fun selectModel(model: String) {
         currentSettings = currentSettings.copy(model = model)
         _state.update { it.copy(currentModel = model) }
         postSystemMessage("Модель: $model")
     }
 
-    fun updateTemperature(temp: Double?) {
+    private fun updateTemperature(temp: Double?) {
         currentSettings = currentSettings.copy(temperature = temp)
         _state.update { it.copy(currentTemperature = temp) }
     }
 
-    fun updateSystemPrompt(prompt: String?) {
+    private fun updateSystemPrompt(prompt: String?) {
         currentSettings = currentSettings.copy(systemPrompt = prompt)
         _state.update { it.copy(systemPrompt = prompt) }
     }
 
-    fun toggleThinking(enabled: Boolean) {
+    private fun toggleThinking(enabled: Boolean) {
         val budget = if (enabled) 10_000 else null
         currentSettings = currentSettings.copy(thinkingBudget = budget)
         _state.update { it.copy(thinkingEnabled = enabled) }
     }
 
-    fun stopStreaming() {
+    private fun stopStreaming() {
         streamingJob?.cancel()
         _state.update { it.copy(isLoading = false) }
     }
 
-    fun clearHistory() {
+    private fun clearHistory() {
         stopStreaming()
         _state.update { it.copy(messages = emptyList(), error = null) }
     }

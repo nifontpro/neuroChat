@@ -12,4 +12,5 @@ data class ChatState(
     val thinkingEnabled: Boolean = false,
     val systemPrompt: String? = null,
     val isConnected: Boolean = true,
+    val isSettingsOpen: Boolean = false,
 )

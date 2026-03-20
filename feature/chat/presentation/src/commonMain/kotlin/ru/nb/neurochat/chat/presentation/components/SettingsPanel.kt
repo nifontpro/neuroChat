@@ -26,19 +26,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import ru.nb.neurochat.chat.presentation.ChatAction
+import ru.nb.neurochat.chat.presentation.ChatState
 import ru.nb.neurochat.domain.model.AVAILABLE_MODELS
 
 @Composable
 fun SettingsPanel(
-    currentModel: String,
-    currentTemperature: Double?,
-    thinkingEnabled: Boolean,
-    systemPrompt: String?,
-    isConnected: Boolean,
-    onSelectModel: (String) -> Unit,
-    onTemperatureChange: (Double?) -> Unit,
-    onThinkingToggle: (Boolean) -> Unit,
-    onSystemPromptChange: (String?) -> Unit,
+    state: ChatState,
+    onAction: (ChatAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -66,9 +61,9 @@ fun SettingsPanel(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        text = if (isConnected) "Онлайн" else "Нет сети",
+                        text = if (state.isConnected) "Онлайн" else "Нет сети",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (isConnected)
+                        color = if (state.isConnected)
                             MaterialTheme.colorScheme.primary
                         else
                             MaterialTheme.colorScheme.error,
@@ -87,7 +82,7 @@ fun SettingsPanel(
             }
 
             items(AVAILABLE_MODELS) { model ->
-                val isSelected = model == currentModel
+                val isSelected = model == state.currentModel
                 Text(
                     text = model,
                     style = MaterialTheme.typography.bodyMedium,
@@ -97,7 +92,7 @@ fun SettingsPanel(
                         MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onSelectModel(model) }
+                        .clickable { onAction(ChatAction.OnSelectModel(model)) }
                         .padding(vertical = 6.dp, horizontal = 4.dp),
                 )
             }
@@ -108,13 +103,13 @@ fun SettingsPanel(
             item {
                 Column {
                     Text(
-                        text = "Температура: ${currentTemperature?.let { ((it * 10).toInt() / 10.0).toString() } ?: "по умолчанию"}",
+                        text = "Температура: ${state.currentTemperature?.let { ((it * 10).toInt() / 10.0).toString() } ?: "по умолчанию"}",
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Spacer(Modifier.height(4.dp))
                     Slider(
-                        value = (currentTemperature ?: 0.7).toFloat(),
-                        onValueChange = { onTemperatureChange(it.toDouble()) },
+                        value = (state.currentTemperature ?: 0.7).toFloat(),
+                        onValueChange = { onAction(ChatAction.OnTemperatureChange(it.toDouble())) },
                         valueRange = 0f..2f,
                         steps = 19,
                     )
@@ -135,8 +130,8 @@ fun SettingsPanel(
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Switch(
-                        checked = thinkingEnabled,
-                        onCheckedChange = onThinkingToggle,
+                        checked = state.thinkingEnabled,
+                        onCheckedChange = { onAction(ChatAction.OnThinkingToggle(it)) },
                     )
                 }
             }
@@ -145,8 +140,8 @@ fun SettingsPanel(
 
             // System prompt
             item {
-                var promptText by remember(systemPrompt) {
-                    mutableStateOf(systemPrompt ?: "")
+                var promptText by remember(state.systemPrompt) {
+                    mutableStateOf(state.systemPrompt ?: "")
                 }
                 Column {
                     Text(
@@ -158,7 +153,7 @@ fun SettingsPanel(
                         value = promptText,
                         onValueChange = {
                             promptText = it
-                            onSystemPromptChange(it.ifBlank { null })
+                            onAction(ChatAction.OnSystemPromptChange(it.ifBlank { null }))
                         },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
