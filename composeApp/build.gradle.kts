@@ -28,6 +28,8 @@ kotlin {
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+            implementation(libs.datastore)
+            implementation(libs.datastore.preferences)
         }
         val desktopMain by getting
         desktopMain.dependencies {

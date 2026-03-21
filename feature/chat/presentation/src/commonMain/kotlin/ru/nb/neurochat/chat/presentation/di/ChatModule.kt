@@ -6,5 +6,12 @@ import ru.nb.neurochat.chat.presentation.ChatViewModel
 import ru.nb.neurochat.domain.model.ApiSettings
 
 fun chatModule(settings: ApiSettings) = module {
-    viewModel { ChatViewModel(repository = get(), baseSettings = settings, connectivityObserver = get()) }
+    viewModel {
+        ChatViewModel(
+            baseSettings = settings,
+            repository = get(),
+            connectivityObserver = get(),
+            settingsStorage = get(),
+        )
+    }
 }

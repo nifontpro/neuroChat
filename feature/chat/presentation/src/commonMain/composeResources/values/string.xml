@@ -14,9 +14,12 @@
     <string name="label_model">Model</string>
     <string name="label_temperature">Temperature: %1$s</string>
     <string name="label_temperature_default">default</string>
+    <string name="label_context_window">Context: %1$s</string>
+    <string name="label_context_all">all messages</string>
     <string name="label_thinking_mode">Thinking mode</string>
     <string name="label_system_prompt">System prompt</string>
     <string name="hint_system_prompt">You are a smart assistant…</string>
+    <string name="label_reset_settings">Reset to defaults</string>
 
     <!-- ChatViewModel system messages -->
     <string name="cmd_system_set">System prompt set: %1$s</string>

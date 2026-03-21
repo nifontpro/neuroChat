@@ -26,15 +26,17 @@ import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_on
 import ru.nb.neurochat.chat.presentation.generated.resources.cmd_unknown
 import ru.nb.neurochat.chat.presentation.generated.resources.error_unknown
 import ru.nb.neurochat.data.connectivity.ConnectivityObserver
+import ru.nb.neurochat.data.preferences.UserSettingsStorage
 import ru.nb.neurochat.domain.model.ApiSettings
 import ru.nb.neurochat.domain.model.ChatMessage
 import ru.nb.neurochat.domain.model.ChatRole
 import ru.nb.neurochat.domain.repository.IChatRepository
 
 class ChatViewModel(
-    baseSettings: ApiSettings,
+    private val baseSettings: ApiSettings,
     private val repository: IChatRepository,
     private val connectivityObserver: ConnectivityObserver,
+    private val settingsStorage: UserSettingsStorage,
 ) : ViewModel() {
 
     private var currentSettings = baseSettings
@@ -52,7 +54,10 @@ class ChatViewModel(
     )
 
     val state = _state
-        .onStart { observeConnectivity() }
+        .onStart {
+            observeConnectivity()
+            loadSavedSettings()
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000L),
@@ -79,6 +84,19 @@ class ChatViewModel(
             is ChatAction.OnTemperatureChange -> updateTemperature(action.temperature)
             is ChatAction.OnThinkingToggle -> toggleThinking(action.enabled)
             is ChatAction.OnSystemPromptChange -> updateSystemPrompt(action.prompt)
+            is ChatAction.OnMaxContextChange -> updateMaxContext(action.count)
+            ChatAction.OnResetSettings -> resetSettings()
+        }
+    }
+
+    private fun loadSavedSettings() {
+        viewModelScope.launch {
+            val saved = settingsStorage.load() ?: return@launch
+            saved.model?.let { selectModel(it) }
+            saved.temperature?.let { updateTemperature(it) }
+            saved.thinkingEnabled?.let { toggleThinking(it) }
+            saved.systemPrompt?.let { updateSystemPrompt(it) }
+            saved.maxContextMessages?.let { updateMaxContext(it) }
         }
     }
 
@@ -110,9 +128,13 @@ class ChatViewModel(
                 )
             }
 
+            val contextMessages = _state.value.messages.dropLast(1).let { msgs ->
+                val limit = _state.value.maxContextMessages
+                if (limit > 0 && msgs.size > limit) msgs.takeLast(limit) else msgs
+            }
             val history = buildList {
                 currentSettings.systemPrompt?.let { add(ChatMessage(ChatRole.System, it)) }
-                addAll(_state.value.messages.dropLast(1))
+                addAll(contextMessages)
             }
 
             val accumulated = StringBuilder()
@@ -205,6 +227,7 @@ class ChatViewModel(
         currentSettings = currentSettings.copy(model = model)
         _state.update { it.copy(currentModel = model) }
         viewModelScope.launch {
+            settingsStorage.saveModel(model)
             postSystemMessage(getString(Res.string.cmd_model_set, model))
         }
     }
@@ -212,17 +235,41 @@ class ChatViewModel(
     private fun updateTemperature(temp: Double?) {
         currentSettings = currentSettings.copy(temperature = temp)
         _state.update { it.copy(currentTemperature = temp) }
+        viewModelScope.launch { settingsStorage.saveTemperature(temp) }
     }
 
     private fun updateSystemPrompt(prompt: String?) {
         currentSettings = currentSettings.copy(systemPrompt = prompt)
         _state.update { it.copy(systemPrompt = prompt) }
+        viewModelScope.launch { settingsStorage.saveSystemPrompt(prompt) }
+    }
+
+    private fun updateMaxContext(count: Int) {
+        _state.update { it.copy(maxContextMessages = count) }
+        viewModelScope.launch { settingsStorage.saveMaxContext(count) }
     }
 
     private fun toggleThinking(enabled: Boolean) {
         val budget = if (enabled) 10_000 else null
         currentSettings = currentSettings.copy(thinkingBudget = budget)
         _state.update { it.copy(thinkingEnabled = enabled) }
+        viewModelScope.launch { settingsStorage.saveThinkingEnabled(enabled) }
+    }
+
+    private fun resetSettings() {
+        viewModelScope.launch {
+            settingsStorage.clear()
+            currentSettings = baseSettings
+            _state.update {
+                it.copy(
+                    currentModel = baseSettings.model,
+                    currentTemperature = baseSettings.temperature,
+                    thinkingEnabled = baseSettings.thinkingBudget != null,
+                    systemPrompt = baseSettings.systemPrompt,
+                    maxContextMessages = 0,
+                )
+            }
+        }
     }
 
     private fun stopStreaming() {

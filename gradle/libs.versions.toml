@@ -32,6 +32,7 @@ kotlinx-serialization = "1.10.0"
 koin = "4.1.1"
 ktor = "3.4.0"
 kermit = "2.0.8"
+datastore = "1.1.7"
 buildkonfig = "0.17.1"
 
 # Project
@@ -103,6 +104,10 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 
 # Logging
 touchlab-kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
+
+# DataStore
+datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
+datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 
 # Build Logic
 android-desugarJdkLibs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "androidDesugarJdkLibs" }

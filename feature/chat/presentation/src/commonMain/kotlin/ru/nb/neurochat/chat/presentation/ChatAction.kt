@@ -13,4 +13,6 @@ sealed interface ChatAction {
     data class OnTemperatureChange(val temperature: Double?) : ChatAction
     data class OnThinkingToggle(val enabled: Boolean) : ChatAction
     data class OnSystemPromptChange(val prompt: String?) : ChatAction
+    data class OnMaxContextChange(val count: Int) : ChatAction
+    data object OnResetSettings : ChatAction
 }

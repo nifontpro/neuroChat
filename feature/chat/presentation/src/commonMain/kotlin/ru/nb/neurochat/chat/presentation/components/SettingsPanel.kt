@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
@@ -18,6 +19,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -37,6 +39,9 @@ import ru.nb.neurochat.chat.presentation.generated.resources.Res
 import ru.nb.neurochat.chat.presentation.generated.resources.hint_system_prompt
 import ru.nb.neurochat.chat.presentation.generated.resources.label_model
 import ru.nb.neurochat.chat.presentation.generated.resources.label_system_prompt
+import ru.nb.neurochat.chat.presentation.generated.resources.label_reset_settings
+import ru.nb.neurochat.chat.presentation.generated.resources.label_context_all
+import ru.nb.neurochat.chat.presentation.generated.resources.label_context_window
 import ru.nb.neurochat.chat.presentation.generated.resources.label_temperature
 import ru.nb.neurochat.chat.presentation.generated.resources.label_temperature_default
 import ru.nb.neurochat.chat.presentation.generated.resources.label_thinking_mode
@@ -163,6 +168,28 @@ fun SettingsPanel(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
+            // Context window
+            Column {
+                val contextLabel = if (state.maxContextMessages == 0)
+                    stringResource(Res.string.label_context_all)
+                else
+                    state.maxContextMessages.toString()
+                Text(
+                    text = stringResource(Res.string.label_context_window, contextLabel),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = contentColor,
+                )
+                Spacer(Modifier.height(4.dp))
+                Slider(
+                    value = state.maxContextMessages.toFloat(),
+                    onValueChange = { onAction(ChatAction.OnMaxContextChange(it.toInt())) },
+                    valueRange = 0f..50f,
+                    steps = 24,
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
             // Thinking mode
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -204,6 +231,19 @@ fun SettingsPanel(
                     maxLines = 6,
                     placeholder = { Text(stringResource(Res.string.hint_system_prompt)) },
                 )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            // Reset settings
+            OutlinedButton(
+                onClick = { onAction(ChatAction.OnResetSettings) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+            ) {
+                Text(text = stringResource(Res.string.label_reset_settings))
             }
         }
     }

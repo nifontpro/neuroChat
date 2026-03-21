@@ -11,6 +11,7 @@ data class ChatState(
     val currentTemperature: Double? = null,
     val thinkingEnabled: Boolean = false,
     val systemPrompt: String? = null,
+    val maxContextMessages: Int = 0,
     val isConnected: Boolean = true,
     val isSettingsOpen: Boolean = false,
 )
