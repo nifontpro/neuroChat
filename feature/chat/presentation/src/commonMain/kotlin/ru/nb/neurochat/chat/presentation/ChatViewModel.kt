@@ -12,6 +12,19 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
+import ru.nb.neurochat.chat.presentation.generated.resources.Res
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_help
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_model_set
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_system_reset
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_system_set
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_t_hint
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_t_set
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_hint
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_off
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_on
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_unknown
+import ru.nb.neurochat.chat.presentation.generated.resources.error_unknown
 import ru.nb.neurochat.data.connectivity.ConnectivityObserver
 import ru.nb.neurochat.domain.model.ApiSettings
 import ru.nb.neurochat.domain.model.ChatMessage
@@ -82,8 +95,8 @@ class ChatViewModel(
         if (text.isBlank() || _state.value.isLoading) return
 
         if (text.startsWith("/")) {
-            handleCommand(text)
             _state.update { it.copy(inputText = "") }
+            viewModelScope.launch { handleCommand(text) }
             return
         }
 
@@ -107,7 +120,7 @@ class ChatViewModel(
             repository.streamMessage(history, currentSettings)
                 .catch { e ->
                     _state.update { it.copy(isLoading = false, error = e.message) }
-                    eventChannel.send(ChatEvent.OnError(e.message ?: "Неизвестная ошибка"))
+                    eventChannel.send(ChatEvent.OnError(e.message ?: getString(Res.string.error_unknown)))
                 }
                 .collect { token ->
                     if (!token.isThinking) {
@@ -130,7 +143,7 @@ class ChatViewModel(
         }
     }
 
-    private fun handleCommand(text: String) {
+    private suspend fun handleCommand(text: String) {
         val parts = text.split(" ", limit = 2)
         val cmd = parts[0].lowercase()
         val arg = parts.getOrNull(1)?.trim() ?: ""
@@ -141,7 +154,8 @@ class ChatViewModel(
                 currentSettings = currentSettings.copy(systemPrompt = prompt)
                 _state.update { it.copy(systemPrompt = prompt) }
                 postSystemMessage(
-                    "Системный промпт ${if (prompt != null) "установлен: $prompt" else "сброшен"}"
+                    if (prompt != null) getString(Res.string.cmd_system_set, prompt)
+                    else getString(Res.string.cmd_system_reset)
                 )
             }
 
@@ -150,9 +164,9 @@ class ChatViewModel(
                 if (temp != null && temp in 0.0..2.0) {
                     currentSettings = currentSettings.copy(temperature = temp)
                     _state.update { it.copy(currentTemperature = temp) }
-                    postSystemMessage("Temperature: $temp")
+                    postSystemMessage(getString(Res.string.cmd_t_set, temp.toString()))
                 } else {
-                    postSystemMessage("Используй: /t <0.0-2.0>")
+                    postSystemMessage(getString(Res.string.cmd_t_hint))
                 }
             }
 
@@ -162,30 +176,22 @@ class ChatViewModel(
                         val budget = 10_000
                         currentSettings = currentSettings.copy(thinkingBudget = budget)
                         _state.update { it.copy(thinkingEnabled = true) }
-                        postSystemMessage("Режим thinking включён (budget: $budget токенов)")
+                        postSystemMessage(getString(Res.string.cmd_think_on, budget.toString()))
                     }
                     "off" -> {
                         currentSettings = currentSettings.copy(thinkingBudget = null)
                         _state.update { it.copy(thinkingEnabled = false) }
-                        postSystemMessage("Режим thinking выключён")
+                        postSystemMessage(getString(Res.string.cmd_think_off))
                     }
-                    else -> postSystemMessage("Используй: /think on | /think off")
+                    else -> postSystemMessage(getString(Res.string.cmd_think_hint))
                 }
             }
 
             "/?" -> {
-                postSystemMessage(
-                    """
-                    Команды:
-                    /system <текст> — задать системный промпт (без аргумента — сброс)
-                    /t <0.0-2.0> — температура
-                    /think on|off — режим расширенного мышления
-                    /? — справка
-                    """.trimIndent()
-                )
+                postSystemMessage(getString(Res.string.cmd_help))
             }
 
-            else -> postSystemMessage("Неизвестная команда. Напиши /? для справки.")
+            else -> postSystemMessage(getString(Res.string.cmd_unknown))
         }
     }
 
@@ -198,7 +204,9 @@ class ChatViewModel(
     private fun selectModel(model: String) {
         currentSettings = currentSettings.copy(model = model)
         _state.update { it.copy(currentModel = model) }
-        postSystemMessage("Модель: $model")
+        viewModelScope.launch {
+            postSystemMessage(getString(Res.string.cmd_model_set, model))
+        }
     }
 
     private fun updateTemperature(temp: Double?) {

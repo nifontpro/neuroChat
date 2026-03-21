@@ -31,7 +31,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.resources.stringResource
 import ru.nb.neurochat.chat.presentation.ChatAction
+import ru.nb.neurochat.chat.presentation.generated.resources.Res
+import ru.nb.neurochat.chat.presentation.generated.resources.hint_system_prompt
+import ru.nb.neurochat.chat.presentation.generated.resources.label_model
+import ru.nb.neurochat.chat.presentation.generated.resources.label_system_prompt
+import ru.nb.neurochat.chat.presentation.generated.resources.label_temperature
+import ru.nb.neurochat.chat.presentation.generated.resources.label_temperature_default
+import ru.nb.neurochat.chat.presentation.generated.resources.label_thinking_mode
+import ru.nb.neurochat.chat.presentation.generated.resources.settings
+import ru.nb.neurochat.chat.presentation.generated.resources.status_offline
+import ru.nb.neurochat.chat.presentation.generated.resources.status_online
 import ru.nb.neurochat.chat.presentation.ChatState
 import ru.nb.neurochat.domain.model.AVAILABLE_MODELS
 
@@ -63,14 +74,14 @@ fun SettingsPanel(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Настройки",
+                text = stringResource(Res.string.settings),
                 style = MaterialTheme.typography.titleLarge,
                 color = contentColor,
             )
 
             // Connection status
             Text(
-                text = if (state.isConnected) "● Онлайн" else "● Нет сети",
+                text = stringResource(if (state.isConnected) Res.string.status_online else Res.string.status_offline),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (state.isConnected)
                     MaterialTheme.colorScheme.primary
@@ -82,7 +93,7 @@ fun SettingsPanel(
 
             // Model dropdown
             Text(
-                text = "Модель",
+                text = stringResource(Res.string.label_model),
                 style = MaterialTheme.typography.titleSmall,
                 color = contentColor,
             )
@@ -133,7 +144,11 @@ fun SettingsPanel(
             // Temperature
             Column {
                 Text(
-                    text = "Температура: ${state.currentTemperature?.let { ((it * 10).toInt() / 10.0) } ?: "по умолчанию"}",
+                    text = stringResource(
+                        Res.string.label_temperature,
+                        state.currentTemperature?.let { ((it * 10).toInt() / 10.0).toString() }
+                            ?: stringResource(Res.string.label_temperature_default),
+                    ),
                     style = MaterialTheme.typography.titleSmall,
                     color = contentColor,
                 )
@@ -155,7 +170,7 @@ fun SettingsPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = "Режим мышления",
+                    text = stringResource(Res.string.label_thinking_mode),
                     style = MaterialTheme.typography.titleSmall,
                     color = contentColor,
                 )
@@ -173,7 +188,7 @@ fun SettingsPanel(
             }
             Column {
                 Text(
-                    text = "Системный промпт",
+                    text = stringResource(Res.string.label_system_prompt),
                     style = MaterialTheme.typography.titleSmall,
                     color = contentColor,
                 )
@@ -187,7 +202,7 @@ fun SettingsPanel(
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3,
                     maxLines = 6,
-                    placeholder = { Text("Ты умный ассистент...") },
+                    placeholder = { Text(stringResource(Res.string.hint_system_prompt)) },
                 )
             }
         }

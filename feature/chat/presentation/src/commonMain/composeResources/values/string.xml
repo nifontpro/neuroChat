@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <!-- ChatScreen -->
+    <string name="title_app">NeuroChat</string>
+    <string name="settings">Settings</string>
+    <string name="clear">Clear</string>
+    <string name="error_message">Error: %1$s</string>
+    <string name="message_input_placeholder">Message or /command…</string>
+    <string name="send_button">→</string>
+
+    <!-- SettingsPanel -->
+    <string name="status_online">● Online</string>
+    <string name="status_offline">● No network</string>
+    <string name="label_model">Model</string>
+    <string name="label_temperature">Temperature: %1$s</string>
+    <string name="label_temperature_default">default</string>
+    <string name="label_thinking_mode">Thinking mode</string>
+    <string name="label_system_prompt">System prompt</string>
+    <string name="hint_system_prompt">You are a smart assistant…</string>
+
+    <!-- ChatViewModel system messages -->
+    <string name="cmd_system_set">System prompt set: %1$s</string>
+    <string name="cmd_system_reset">System prompt reset</string>
+    <string name="cmd_t_set">Temperature: %1$s</string>
+    <string name="cmd_t_hint">Usage: /t &lt;0.0-2.0&gt;</string>
+    <string name="cmd_think_on">Thinking mode enabled (budget: %1$s tokens)</string>
+    <string name="cmd_think_off">Thinking mode disabled</string>
+    <string name="cmd_think_hint">Usage: /think on | /think off</string>
+    <string name="cmd_help">Commands:\n/system &lt;text&gt; — set system prompt (no arg — reset)\n/t &lt;0.0-2.0&gt; — temperature\n/think on|off — extended thinking mode\n/? — help</string>
+    <string name="cmd_unknown">Unknown command. Type /? for help.</string>
+    <string name="cmd_model_set">Model: %1$s</string>
+    <string name="error_unknown">Unknown error</string>
+</resources>

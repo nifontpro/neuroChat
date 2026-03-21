@@ -2,6 +2,10 @@ plugins {
     alias(libs.plugins.convention.cmp.feature)
 }
 
+compose.resources {
+    packageOfResClass = "ru.nb.neurochat.chat.presentation.generated.resources"
+}
+
 kotlin {
     sourceSets {
         commonMain.dependencies {

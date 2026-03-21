@@ -49,8 +49,16 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import ru.nb.neurochat.chat.presentation.components.SettingsPanel
+import ru.nb.neurochat.chat.presentation.generated.resources.Res
+import ru.nb.neurochat.chat.presentation.generated.resources.clear
+import ru.nb.neurochat.chat.presentation.generated.resources.error_message
+import ru.nb.neurochat.chat.presentation.generated.resources.message_input_placeholder
+import ru.nb.neurochat.chat.presentation.generated.resources.send_button
+import ru.nb.neurochat.chat.presentation.generated.resources.settings
+import ru.nb.neurochat.chat.presentation.generated.resources.title_app
 import ru.nb.neurochat.domain.model.ChatRole
 import ru.nb.neurochat.presentation.util.ObserveAsEvents
 import ru.nb.neurochat.presentation.util.currentDeviceConfiguration
@@ -150,7 +158,7 @@ private fun ChatContent(
             TopAppBar(
                 title = {
                     Column {
-                        Text("NeuroChat")
+                        Text(stringResource(Res.string.title_app))
                         Text(
                             text = buildString {
                                 append(state.currentModel)
@@ -169,11 +177,11 @@ private fun ChatContent(
                 actions = {
                     if (showSettingsButton) {
                         IconButton(onClick = { onAction(ChatAction.OnSettingsClick) }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Настройки")
+                            Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
                         }
                     }
                     TextButton(onClick = { onAction(ChatAction.OnClearHistory) }) {
-                        Text("Очистить")
+                        Text(stringResource(Res.string.clear))
                     }
                 }
             )
@@ -245,7 +253,7 @@ private fun MessagesList(
         state.error?.let { error ->
             item {
                 Text(
-                    text = "Ошибка: $error",
+                    text = stringResource(Res.string.error_message, error),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(4.dp),
@@ -337,7 +345,7 @@ private fun InputBar(
             value = text,
             onValueChange = onTextChange,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Сообщение или /команда...") },
+            placeholder = { Text(stringResource(Res.string.message_input_placeholder)) },
             maxLines = 4,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { if (!isLoading) onSend() }),
@@ -351,7 +359,7 @@ private fun InputBar(
                 onClick = onSend,
                 enabled = text.isNotBlank(),
             ) {
-                Text("→", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(Res.string.send_button), style = MaterialTheme.typography.titleLarge)
             }
         }
     }

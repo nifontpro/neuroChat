@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <!-- ChatScreen -->
+    <string name="title_app">NeuroChat</string>
+    <string name="settings">Настройки</string>
+    <string name="clear">Очистить</string>
+    <string name="error_message">Ошибка: %1$s</string>
+    <string name="message_input_placeholder">Сообщение или /команда…</string>
+    <string name="send_button">→</string>
+
+    <!-- SettingsPanel -->
+    <string name="status_online">● Онлайн</string>
+    <string name="status_offline">● Нет сети</string>
+    <string name="label_model">Модель</string>
+    <string name="label_temperature">Температура: %1$s</string>
+    <string name="label_temperature_default">по умолчанию</string>
+    <string name="label_thinking_mode">Режим мышления</string>
+    <string name="label_system_prompt">Системный промпт</string>
+    <string name="hint_system_prompt">Ты умный ассистент…</string>
+
+    <!-- ChatViewModel system messages -->
+    <string name="cmd_system_set">Системный промпт установлен: %1$s</string>
+    <string name="cmd_system_reset">Системный промпт сброшен</string>
+    <string name="cmd_t_set">Температура: %1$s</string>
+    <string name="cmd_t_hint">Используй: /t &lt;0.0-2.0&gt;</string>
+    <string name="cmd_think_on">Режим thinking включён (budget: %1$s токенов)</string>
+    <string name="cmd_think_off">Режим thinking выключён</string>
+    <string name="cmd_think_hint">Используй: /think on | /think off</string>
+    <string name="cmd_help">Команды:\n/system &lt;текст&gt; — задать системный промпт (без аргумента — сброс)\n/t &lt;0.0-2.0&gt; — температура\n/think on|off — режим расширенного мышления\n/? — справка</string>
+    <string name="cmd_unknown">Неизвестная команда. Напиши /? для справки.</string>
+    <string name="cmd_model_set">Модель: %1$s</string>
+    <string name="error_unknown">Неизвестная ошибка</string>
+</resources>
