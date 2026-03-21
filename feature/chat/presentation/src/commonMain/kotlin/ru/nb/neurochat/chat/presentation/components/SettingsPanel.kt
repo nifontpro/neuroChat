@@ -146,7 +146,7 @@ fun SettingsPanel(
                 Text(
                     text = stringResource(
                         Res.string.label_temperature,
-                        state.currentTemperature?.let { ((it * 10).toInt() / 10.0).toString() }
+                        state.currentTemperature?.let { (kotlin.math.round(it * 10) / 10.0).toString() }
                             ?: stringResource(Res.string.label_temperature_default),
                     ),
                     style = MaterialTheme.typography.titleSmall,
@@ -155,7 +155,7 @@ fun SettingsPanel(
                 Spacer(Modifier.height(4.dp))
                 Slider(
                     value = (state.currentTemperature ?: 0.7).toFloat(),
-                    onValueChange = { onAction(ChatAction.OnTemperatureChange(it.toDouble())) },
+                    onValueChange = { onAction(ChatAction.OnTemperatureChange(kotlin.math.round(it * 10) / 10.0)) },
                     valueRange = 0f..2f,
                     steps = 19,
                 )
