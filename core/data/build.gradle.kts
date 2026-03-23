@@ -26,6 +26,7 @@ kotlin {
         val desktopMain by getting
         desktopMain.dependencies {
             implementation(libs.ktor.client.cio)
+            implementation(libs.slf4j.simple)
         }
     }
 }

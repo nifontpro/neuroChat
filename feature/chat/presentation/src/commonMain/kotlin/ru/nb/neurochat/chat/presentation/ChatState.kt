@@ -14,4 +14,5 @@ data class ChatState(
     val maxContextMessages: Int = 0,
     val isConnected: Boolean = true,
     val isSettingsOpen: Boolean = false,
+    val showStatistics: Boolean = false,
 )

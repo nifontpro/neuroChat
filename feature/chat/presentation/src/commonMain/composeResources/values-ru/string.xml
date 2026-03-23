@@ -19,6 +19,7 @@
     <string name="label_thinking_mode">Режим мышления</string>
     <string name="label_system_prompt">Системный промпт</string>
     <string name="hint_system_prompt">Ты умный ассистент…</string>
+    <string name="label_show_statistics">Статистика ответа</string>
     <string name="label_reset_settings">Сбросить настройки</string>
 
     <!-- ChatViewModel system messages -->

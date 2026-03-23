@@ -30,7 +30,9 @@ import ru.nb.neurochat.data.preferences.UserSettingsStorage
 import ru.nb.neurochat.domain.model.ApiSettings
 import ru.nb.neurochat.domain.model.ChatMessage
 import ru.nb.neurochat.domain.model.ChatRole
+import ru.nb.neurochat.domain.model.ResponseStatistics
 import ru.nb.neurochat.domain.repository.IChatRepository
+import kotlin.time.TimeSource
 
 class ChatViewModel(
     private val baseSettings: ApiSettings,
@@ -85,6 +87,7 @@ class ChatViewModel(
             is ChatAction.OnThinkingToggle -> toggleThinking(action.enabled)
             is ChatAction.OnSystemPromptChange -> updateSystemPrompt(action.prompt)
             is ChatAction.OnMaxContextChange -> updateMaxContext(action.count)
+            is ChatAction.OnToggleStatistics -> toggleStatistics(action.enabled)
             ChatAction.OnResetSettings -> resetSettings()
         }
     }
@@ -97,6 +100,7 @@ class ChatViewModel(
             saved.thinkingEnabled?.let { toggleThinking(it) }
             saved.systemPrompt?.let { updateSystemPrompt(it) }
             saved.maxContextMessages?.let { updateMaxContext(it) }
+            saved.showStatistics?.let { toggleStatistics(it) }
         }
     }
 
@@ -138,6 +142,8 @@ class ChatViewModel(
             }
 
             val accumulated = StringBuilder()
+            var tokenCount = 0
+            val timeMark = TimeSource.Monotonic.markNow()
 
             repository.streamMessage(history, currentSettings)
                 .catch { e ->
@@ -147,10 +153,18 @@ class ChatViewModel(
                 .collect { token ->
                     if (!token.isThinking) {
                         accumulated.append(token.text)
+                        tokenCount++
                         updateLastMessage(accumulated.toString())
                     }
                 }
 
+            val durationMs = timeMark.elapsedNow().inWholeMilliseconds
+            val statistics = ResponseStatistics(
+                durationMs = durationMs,
+                tokenCount = tokenCount,
+                charCount = accumulated.length,
+            )
+            updateLastMessageStatistics(statistics)
             _state.update { it.copy(isLoading = false) }
         }
     }
@@ -160,6 +174,16 @@ class ChatViewModel(
             val messages = state.messages.toMutableList()
             if (messages.isNotEmpty() && messages.last().role == ChatRole.Assistant) {
                 messages[messages.lastIndex] = messages.last().copy(content = text)
+            }
+            state.copy(messages = messages)
+        }
+    }
+
+    private fun updateLastMessageStatistics(statistics: ResponseStatistics) {
+        _state.update { state ->
+            val messages = state.messages.toMutableList()
+            if (messages.isNotEmpty() && messages.last().role == ChatRole.Assistant) {
+                messages[messages.lastIndex] = messages.last().copy(statistics = statistics)
             }
             state.copy(messages = messages)
         }
@@ -249,6 +273,11 @@ class ChatViewModel(
         viewModelScope.launch { settingsStorage.saveMaxContext(count) }
     }
 
+    private fun toggleStatistics(enabled: Boolean) {
+        _state.update { it.copy(showStatistics = enabled) }
+        viewModelScope.launch { settingsStorage.saveShowStatistics(enabled) }
+    }
+
     private fun toggleThinking(enabled: Boolean) {
         val budget = if (enabled) 10_000 else null
         currentSettings = currentSettings.copy(thinkingBudget = budget)
@@ -267,6 +296,7 @@ class ChatViewModel(
                     thinkingEnabled = baseSettings.thinkingBudget != null,
                     systemPrompt = baseSettings.systemPrompt,
                     maxContextMessages = 0,
+                    showStatistics = false,
                 )
             }
         }

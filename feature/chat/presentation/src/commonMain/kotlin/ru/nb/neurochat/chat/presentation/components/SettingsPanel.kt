@@ -40,6 +40,7 @@ import ru.nb.neurochat.chat.presentation.generated.resources.hint_system_prompt
 import ru.nb.neurochat.chat.presentation.generated.resources.label_model
 import ru.nb.neurochat.chat.presentation.generated.resources.label_system_prompt
 import ru.nb.neurochat.chat.presentation.generated.resources.label_reset_settings
+import ru.nb.neurochat.chat.presentation.generated.resources.label_show_statistics
 import ru.nb.neurochat.chat.presentation.generated.resources.label_context_all
 import ru.nb.neurochat.chat.presentation.generated.resources.label_context_window
 import ru.nb.neurochat.chat.presentation.generated.resources.label_temperature
@@ -204,6 +205,25 @@ fun SettingsPanel(
                 Switch(
                     checked = state.thinkingEnabled,
                     onCheckedChange = { onAction(ChatAction.OnThinkingToggle(it)) },
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            // Show statistics
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = stringResource(Res.string.label_show_statistics),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = contentColor,
+                )
+                Switch(
+                    checked = state.showStatistics,
+                    onCheckedChange = { onAction(ChatAction.OnToggleStatistics(it)) },
                 )
             }
 

@@ -19,6 +19,7 @@
     <string name="label_thinking_mode">Thinking mode</string>
     <string name="label_system_prompt">System prompt</string>
     <string name="hint_system_prompt">You are a smart assistant…</string>
+    <string name="label_show_statistics">Response statistics</string>
     <string name="label_reset_settings">Reset to defaults</string>
 
     <!-- ChatViewModel system messages -->

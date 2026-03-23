@@ -16,6 +16,7 @@ class UserSettingsStorage(
     private val keyThinkingEnabled = intPreferencesKey("thinking_enabled")
     private val keySystemPrompt = stringPreferencesKey("system_prompt")
     private val keyMaxContext = intPreferencesKey("max_context_messages")
+    private val keyShowStatistics = intPreferencesKey("show_statistics")
 
     suspend fun saveModel(model: String) {
         dataStore.edit { it[keyModel] = model }
@@ -43,6 +44,10 @@ class UserSettingsStorage(
         dataStore.edit { it[keyMaxContext] = count }
     }
 
+    suspend fun saveShowStatistics(enabled: Boolean) {
+        dataStore.edit { it[keyShowStatistics] = if (enabled) 1 else 0 }
+    }
+
     suspend fun load(): SavedSettings? {
         val prefs = dataStore.data.first()
         val hasAny = prefs.asMap().isNotEmpty()
@@ -54,6 +59,7 @@ class UserSettingsStorage(
             thinkingEnabled = prefs[keyThinkingEnabled]?.let { it == 1 },
             systemPrompt = prefs[keySystemPrompt],
             maxContextMessages = prefs[keyMaxContext],
+            showStatistics = prefs[keyShowStatistics]?.let { it == 1 },
         )
     }
 
@@ -68,4 +74,5 @@ data class SavedSettings(
     val thinkingEnabled: Boolean?,
     val systemPrompt: String?,
     val maxContextMessages: Int?,
+    val showStatistics: Boolean?,
 )

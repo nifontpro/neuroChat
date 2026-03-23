@@ -13,12 +13,19 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
@@ -59,9 +66,11 @@ import ru.nb.neurochat.chat.presentation.generated.resources.message_input_place
 import ru.nb.neurochat.chat.presentation.generated.resources.send_button
 import ru.nb.neurochat.chat.presentation.generated.resources.settings
 import ru.nb.neurochat.chat.presentation.generated.resources.title_app
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import ru.nb.neurochat.domain.model.ChatRole
+import ru.nb.neurochat.domain.model.ResponseStatistics
 import ru.nb.neurochat.presentation.util.ObserveAsEvents
-import ru.nb.neurochat.presentation.util.currentDeviceConfiguration
 
 @Composable
 fun ChatScreenRoot(
@@ -95,9 +104,10 @@ fun ChatScreen(
     onAction: (ChatAction) -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
-    val deviceConfig = currentDeviceConfiguration()
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val isWideScreen = windowSizeClass.minWidthDp >= WIDTH_DP_EXPANDED_LOWER_BOUND
 
-    if (deviceConfig.isWideScreen) {
+    if (isWideScreen) {
         Row(modifier = Modifier.fillMaxSize()) {
             SettingsPanel(
                 state = state,
@@ -217,7 +227,8 @@ private fun MessagesList(
 
     LaunchedEffect(state.messages.size, state.messages.lastOrNull()?.content) {
         if (state.messages.isNotEmpty()) {
-            listState.animateScrollToItem(state.messages.lastIndex)
+            listState.scrollToItem(state.messages.lastIndex)
+            listState.scrollBy(Float.MAX_VALUE)
         }
     }
 
@@ -233,11 +244,21 @@ private fun MessagesList(
                 message.role == ChatRole.Assistant
             when (message.role) {
                 ChatRole.System -> SystemMessage(text = message.content)
-                else -> MessageBubble(
-                    text = message.content,
-                    isUser = message.role == ChatRole.User,
-                    showCursor = isStreaming,
-                )
+                else -> {
+                    MessageBubble(
+                        text = message.content,
+                        isUser = message.role == ChatRole.User,
+                        showCursor = isStreaming,
+                    )
+                    val stats = message.statistics
+                    if (state.showStatistics &&
+                        message.role == ChatRole.Assistant &&
+                        stats != null &&
+                        !isStreaming
+                    ) {
+                        StatisticsLabel(statistics = stats)
+                    }
+                }
             }
         }
         if (state.isLoading && state.messages.lastOrNull()?.role != ChatRole.Assistant) {
@@ -325,6 +346,27 @@ private fun MessageBubble(
 }
 
 @Composable
+private fun StatisticsLabel(
+    statistics: ResponseStatistics,
+    modifier: Modifier = Modifier,
+) {
+    val durationSec = kotlin.math.round(statistics.durationMs / 100.0) / 10.0
+    val speed = kotlin.math.round(statistics.tokensPerSecond * 10.0) / 10.0
+    val text = buildString {
+        append("$durationSec s")
+        append("  •  ${statistics.tokenCount} tok")
+        append("  •  $speed tok/s")
+        append("  •  ${statistics.charCount} chars")
+    }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(start = 12.dp),
+    )
+}
+
+@Composable
 private fun InputBar(
     text: String,
     isLoading: Boolean,
@@ -344,7 +386,20 @@ private fun InputBar(
         OutlinedTextField(
             value = text,
             onValueChange = onTextChange,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .onPreviewKeyEvent { event ->
+                    if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) {
+                        if (event.isShiftPressed) {
+                            false // Shift+Enter — пропускаем, перенос строки
+                        } else {
+                            if (!isLoading) onSend()
+                            true // Enter — перехватываем, отправка
+                        }
+                    } else {
+                        false
+                    }
+                },
             placeholder = { Text(stringResource(Res.string.message_input_placeholder)) },
             maxLines = 4,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
