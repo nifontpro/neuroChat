@@ -27,6 +27,7 @@ import ru.nb.neurochat.chat.presentation.generated.resources.cmd_unknown
 import ru.nb.neurochat.chat.presentation.generated.resources.error_unknown
 import ru.nb.neurochat.data.connectivity.ConnectivityObserver
 import ru.nb.neurochat.data.preferences.UserSettingsStorage
+import ru.nb.neurochat.domain.datasource.IChatHistoryDataSource
 import ru.nb.neurochat.domain.model.ApiSettings
 import ru.nb.neurochat.domain.model.ChatMessage
 import ru.nb.neurochat.domain.model.ChatRole
@@ -39,6 +40,7 @@ class ChatViewModel(
     private val repository: IChatRepository,
     private val connectivityObserver: ConnectivityObserver,
     private val settingsStorage: UserSettingsStorage,
+    private val historyDataSource: IChatHistoryDataSource,
 ) : ViewModel() {
 
     private var currentSettings = baseSettings
@@ -59,6 +61,7 @@ class ChatViewModel(
         .onStart {
             observeConnectivity()
             loadSavedSettings()
+            loadHistory()
         }
         .stateIn(
             scope = viewModelScope,
@@ -89,6 +92,15 @@ class ChatViewModel(
             is ChatAction.OnMaxContextChange -> updateMaxContext(action.count)
             is ChatAction.OnToggleStatistics -> toggleStatistics(action.enabled)
             ChatAction.OnResetSettings -> resetSettings()
+        }
+    }
+
+    private fun loadHistory() {
+        viewModelScope.launch {
+            val messages = historyDataSource.getMessages()
+            if (messages.isNotEmpty()) {
+                _state.update { it.copy(messages = messages) }
+            }
         }
     }
 
@@ -144,9 +156,11 @@ class ChatViewModel(
             val accumulated = StringBuilder()
             var tokenCount = 0
             val timeMark = TimeSource.Monotonic.markNow()
+            var streamError = false
 
             repository.streamMessage(history, currentSettings)
                 .catch { e ->
+                    streamError = true
                     _state.update { it.copy(isLoading = false, error = e.message) }
                     eventChannel.send(ChatEvent.OnError(e.message ?: getString(Res.string.error_unknown)))
                 }
@@ -166,6 +180,12 @@ class ChatViewModel(
             )
             updateLastMessageStatistics(statistics)
             _state.update { it.copy(isLoading = false) }
+
+            if (!streamError) {
+                val assistantMessage = _state.value.messages.last()
+                historyDataSource.saveMessage(userMessage)
+                historyDataSource.saveMessage(assistantMessage)
+            }
         }
     }
 
@@ -309,6 +329,9 @@ class ChatViewModel(
 
     private fun clearHistory() {
         stopStreaming()
+        viewModelScope.launch {
+            historyDataSource.clearAll()
+        }
         _state.update { it.copy(messages = emptyList(), error = null) }
     }
 }

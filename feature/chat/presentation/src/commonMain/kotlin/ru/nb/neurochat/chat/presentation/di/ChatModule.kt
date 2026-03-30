@@ -12,6 +12,7 @@ fun chatModule(settings: ApiSettings) = module {
             repository = get(),
             connectivityObserver = get(),
             settingsStorage = get(),
+            historyDataSource = get(),
         )
     }
 }

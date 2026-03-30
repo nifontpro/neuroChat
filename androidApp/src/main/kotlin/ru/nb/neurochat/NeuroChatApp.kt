@@ -3,6 +3,7 @@ package ru.nb.neurochat
 import android.app.Application
 import org.koin.android.ext.koin.androidContext
 import ru.nb.neurochat.data.connectivity.ConnectivityObserver
+import ru.nb.neurochat.data.db.DatabaseFactory
 import ru.nb.neurochat.data.preferences.createDataStore
 import ru.nb.neurochat.di.initKoin
 
@@ -13,6 +14,7 @@ class NeuroChatApp : Application() {
             platformModules = {
                 single { ConnectivityObserver(androidContext()) }
                 single { createDataStore(androidContext()) }
+                single { DatabaseFactory(androidContext()) }
             }
         ) {
             androidContext(this@NeuroChatApp)

@@ -12,6 +12,7 @@ dependencies {
 	compileOnly(libs.kotlin.gradlePlugin)
 	compileOnly(libs.compose.gradlePlugin)
 	compileOnly(libs.ksp.gradlePlugin)
+	implementation(libs.room.gradlePlugin)
 	implementation(libs.buildkonfig.gradlePlugin)
 	implementation(libs.buildkonfig.compiler)
 }
@@ -63,6 +64,10 @@ gradlePlugin {
 		register("buildKonfig") {
 			id = "ru.nb.neurochat.convention.buildkonfig"
 			implementationClass = "BuildKonfigConventionPlugin"
+		}
+		register("room") {
+			id = "ru.nb.neurochat.convention.room"
+			implementationClass = "RoomConventionPlugin"
 		}
 	}
 }
