@@ -28,6 +28,8 @@ kotlin {
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
+            implementation(libs.material3.adaptive)
             implementation(libs.datastore)
             implementation(libs.datastore.preferences)
         }

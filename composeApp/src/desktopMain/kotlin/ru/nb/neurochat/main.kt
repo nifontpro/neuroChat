@@ -24,6 +24,7 @@ fun main() {
 
     val windowStateStorage = WindowStateStorage()
     val savedBounds = windowStateStorage.load()
+    val isMac = System.getProperty("os.name").lowercase().contains("mac")
 
     application {
         val windowState = rememberWindowState(
@@ -41,24 +42,31 @@ fun main() {
                 WindowPlacement.Floating,
         )
 
-        Window(
-            onCloseRequest = {
-                val pos = windowState.position
-                windowStateStorage.save(
-                    WindowStateStorage.WindowBounds(
-                        x = if (pos is WindowPosition.Absolute) pos.x.value else 0f,
-                        y = if (pos is WindowPosition.Absolute) pos.y.value else 0f,
-                        width = windowState.size.width.value,
-                        height = windowState.size.height.value,
-                        isMaximized = windowState.placement == WindowPlacement.Maximized,
-                    )
+        val onClose: () -> Unit = {
+            val pos = windowState.position
+            windowStateStorage.save(
+                WindowStateStorage.WindowBounds(
+                    x = if (pos is WindowPosition.Absolute) pos.x.value else 0f,
+                    y = if (pos is WindowPosition.Absolute) pos.y.value else 0f,
+                    width = windowState.size.width.value,
+                    height = windowState.size.height.value,
+                    isMaximized = windowState.placement == WindowPlacement.Maximized,
                 )
-                exitApplication()
-            },
+            )
+            exitApplication()
+        }
+
+        Window(
+            onCloseRequest = onClose,
             state = windowState,
             title = "NeuroChat",
         ) {
-            App()
+            if (isMac) {
+                window.rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
+                window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
+                window.rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
+            }
+            DesktopApp(isMac = isMac)
         }
     }
 }

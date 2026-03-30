@@ -71,6 +71,7 @@ import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_L
 import ru.nb.neurochat.domain.model.ChatRole
 import ru.nb.neurochat.domain.model.ResponseStatistics
 import ru.nb.neurochat.presentation.util.ObserveAsEvents
+import ru.nb.neurochat.presentation.util.isDesktop
 
 @Composable
 fun ChatScreenRoot(
@@ -122,6 +123,9 @@ fun ChatScreen(
                 state = state,
                 onAction = onAction,
                 showSettingsButton = false,
+                showTopBarInfo = !isDesktop,
+                showClearButton = !isDesktop,
+                showTopBar = !isDesktop,
                 snackbarHostState = snackbarHostState,
                 modifier = Modifier
                     .fillMaxHeight()
@@ -132,7 +136,10 @@ fun ChatScreen(
         ChatContent(
             state = state,
             onAction = onAction,
-            showSettingsButton = true,
+            showSettingsButton = !isDesktop,
+            showTopBarInfo = !isDesktop,
+            showClearButton = !isDesktop,
+            showTopBar = !isDesktop,
             snackbarHostState = snackbarHostState,
             modifier = Modifier.fillMaxSize(),
         )
@@ -158,6 +165,9 @@ private fun ChatContent(
     state: ChatState,
     onAction: (ChatAction) -> Unit,
     showSettingsButton: Boolean,
+    showTopBarInfo: Boolean,
+    showClearButton: Boolean,
+    showTopBar: Boolean,
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
@@ -165,23 +175,26 @@ private fun ChatContent(
         modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
+            if (!showTopBar) return@Scaffold
             TopAppBar(
                 title = {
-                    Column {
-                        Text(stringResource(Res.string.title_app))
-                        Text(
-                            text = buildString {
-                                append(state.currentModel)
-                                state.currentTemperature?.let { append("  t=$it") }
-                                if (state.thinkingEnabled) append("  thinking")
-                                if (!state.isConnected) append("  [offline]")
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (state.isConnected)
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            else
-                                MaterialTheme.colorScheme.error,
-                        )
+                    if (showTopBarInfo) {
+                        Column {
+                            Text(stringResource(Res.string.title_app))
+                            Text(
+                                text = buildString {
+                                    append(state.currentModel)
+                                    state.currentTemperature?.let { append("  t=$it") }
+                                    if (state.thinkingEnabled) append("  thinking")
+                                    if (!state.isConnected) append("  [offline]")
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (state.isConnected)
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                else
+                                    MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 },
                 actions = {
@@ -190,8 +203,10 @@ private fun ChatContent(
                             Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.settings))
                         }
                     }
-                    TextButton(onClick = { onAction(ChatAction.OnClearHistory) }) {
-                        Text(stringResource(Res.string.clear))
+                    if (showClearButton) {
+                        TextButton(onClick = { onAction(ChatAction.OnClearHistory) }) {
+                            Text(stringResource(Res.string.clear))
+                        }
                     }
                 }
             )
@@ -225,7 +240,7 @@ private fun MessagesList(
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(state.messages.size, state.messages.lastOrNull()?.content) {
+    LaunchedEffect(state.messages.size, state.messages.lastOrNull()?.content, state.isLoading) {
         if (state.messages.isNotEmpty()) {
             listState.scrollToItem(state.messages.lastIndex)
             listState.scrollBy(Float.MAX_VALUE)
@@ -315,7 +330,7 @@ private fun MessageBubble(
     val textColor = if (isUser)
         MaterialTheme.colorScheme.onPrimaryContainer
     else
-        MaterialTheme.colorScheme.onSurfaceVariant
+        MaterialTheme.colorScheme.onSurface
 
     Box(
         modifier = modifier.fillMaxWidth(),
