@@ -1,6 +1,7 @@
 package ru.nb.neurochat.chat.presentation
 
 import ru.nb.neurochat.domain.model.ChatMessage
+import ru.nb.neurochat.domain.model.TokenUsage
 
 data class ChatState(
     val messages: List<ChatMessage> = emptyList(),
@@ -15,4 +16,6 @@ data class ChatState(
     val isConnected: Boolean = true,
     val isSettingsOpen: Boolean = false,
     val showStatistics: Boolean = false,
+    val lastUsage: TokenUsage? = null,
+    val sessionTotalTokens: Int = 0,
 )

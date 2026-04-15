@@ -10,6 +10,12 @@ internal data class ChatRequest(
     val temperature: Double? = null,
     val stream: Boolean = true,
     val thinking: ThinkingConfig? = null,
+    @SerialName("stream_options") val streamOptions: StreamOptions? = null,
+)
+
+@Serializable
+internal data class StreamOptions(
+    @SerialName("include_usage") val includeUsage: Boolean = true,
 )
 
 @Serializable
@@ -27,6 +33,14 @@ internal data class MessageDto(
 @Serializable
 internal data class ChatStreamChunk(
     val choices: List<StreamChoice>,
+    val usage: UsageDto? = null,
+)
+
+@Serializable
+internal data class UsageDto(
+    @SerialName("prompt_tokens") val promptTokens: Int = 0,
+    @SerialName("completion_tokens") val completionTokens: Int = 0,
+    @SerialName("total_tokens") val totalTokens: Int = 0,
 )
 
 @Serializable

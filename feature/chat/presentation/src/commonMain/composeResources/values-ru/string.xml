@@ -19,8 +19,20 @@
     <string name="label_thinking_mode">Режим мышления</string>
     <string name="label_system_prompt">Системный промпт</string>
     <string name="hint_system_prompt">Ты умный ассистент…</string>
-    <string name="label_show_statistics">Статистика ответа</string>
+    <string name="label_show_statistics">Показывать статистику</string>
     <string name="label_reset_settings">Сбросить настройки</string>
+
+    <!-- Statistics block -->
+    <string name="label_stats_section">Статистика последнего ответа</string>
+    <string name="label_stats_empty">Статистика появится после первого ответа модели</string>
+    <string name="label_stats_duration">Время генерации: %1$s с</string>
+    <string name="label_stats_tokens">Получено токенов: %1$s</string>
+    <string name="label_stats_speed">Скорость: %1$s ток/с</string>
+    <string name="label_stats_chars">Символов в ответе: %1$s</string>
+    <string name="label_stats_prompt_tokens">Токенов в запросе: %1$s</string>
+    <string name="label_stats_completion_tokens">Токенов в ответе (по API): %1$s</string>
+    <string name="label_stats_total_tokens">Всего токенов за запрос: %1$s</string>
+    <string name="label_stats_session_total">Всего токенов за сессию: %1$s</string>
 
     <!-- ChatViewModel system messages -->
     <string name="cmd_system_set">Системный промпт установлен: %1$s</string>

@@ -135,7 +135,7 @@ class ChatViewModel(
         }
 
         val userMessage = ChatMessage(role = ChatRole.User, content = text)
-        _state.update { it.copy(inputText = "", isLoading = true, error = null) }
+        _state.update { it.copy(inputText = "", isLoading = true, error = null, lastUsage = null) }
 
         streamingJob = viewModelScope.launch {
             _state.update { state ->
@@ -165,7 +165,15 @@ class ChatViewModel(
                     eventChannel.send(ChatEvent.OnError(e.message ?: getString(Res.string.error_unknown)))
                 }
                 .collect { token ->
-                    if (!token.isThinking) {
+                    token.usage?.let { usage ->
+                        _state.update { state ->
+                            state.copy(
+                                lastUsage = usage,
+                                sessionTotalTokens = state.sessionTotalTokens + usage.totalTokens,
+                            )
+                        }
+                    }
+                    if (!token.isThinking && token.text.isNotEmpty()) {
                         accumulated.append(token.text)
                         tokenCount++
                         updateLastMessage(accumulated.toString())
@@ -332,6 +340,6 @@ class ChatViewModel(
         viewModelScope.launch {
             historyDataSource.clearAll()
         }
-        _state.update { it.copy(messages = emptyList(), error = null) }
+        _state.update { it.copy(messages = emptyList(), error = null, lastUsage = null, sessionTotalTokens = 0) }
     }
 }

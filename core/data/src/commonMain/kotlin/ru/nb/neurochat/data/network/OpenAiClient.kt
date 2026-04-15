@@ -25,9 +25,11 @@ import ru.nb.neurochat.data.model.ChatRequest
 import ru.nb.neurochat.data.model.ChatStreamChunk
 import ru.nb.neurochat.data.model.MessageDto
 import ru.nb.neurochat.data.model.StreamErrorChunk
+import ru.nb.neurochat.data.model.StreamOptions
 import ru.nb.neurochat.data.model.ThinkingConfig
 import ru.nb.neurochat.domain.model.ApiSettings
 import ru.nb.neurochat.domain.model.StreamToken
+import ru.nb.neurochat.domain.model.TokenUsage
 
 internal class OpenAiClient(private val baseSettings: ApiSettings) {
 
@@ -77,6 +79,7 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
                     temperature = temperature,
                     stream = true,
                     thinking = thinking,
+                    streamOptions = StreamOptions(),
                 )
             )
 
@@ -122,6 +125,16 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
                         delta?.content?.let {
                             send(StreamToken(it, isThinking = false))
                             tokenCount++
+                        }
+                        chunk.usage?.let { u ->
+                            send(StreamToken(
+                                text = "",
+                                usage = TokenUsage(
+                                    promptTokens = u.promptTokens,
+                                    completionTokens = u.completionTokens,
+                                    totalTokens = u.totalTokens,
+                                )
+                            ))
                         }
                         continue
                     }

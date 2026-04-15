@@ -19,8 +19,20 @@
     <string name="label_thinking_mode">Thinking mode</string>
     <string name="label_system_prompt">System prompt</string>
     <string name="hint_system_prompt">You are a smart assistant…</string>
-    <string name="label_show_statistics">Response statistics</string>
+    <string name="label_show_statistics">Show statistics</string>
     <string name="label_reset_settings">Reset to defaults</string>
+
+    <!-- Statistics block -->
+    <string name="label_stats_section">Last response statistics</string>
+    <string name="label_stats_empty">Statistics will appear after the first model response</string>
+    <string name="label_stats_duration">Generation time: %1$s s</string>
+    <string name="label_stats_tokens">Tokens received: %1$s</string>
+    <string name="label_stats_speed">Speed: %1$s tok/s</string>
+    <string name="label_stats_chars">Characters in response: %1$s</string>
+    <string name="label_stats_prompt_tokens">Prompt tokens: %1$s</string>
+    <string name="label_stats_completion_tokens">Completion tokens (API): %1$s</string>
+    <string name="label_stats_total_tokens">Total tokens per request: %1$s</string>
+    <string name="label_stats_session_total">Total tokens in session: %1$s</string>
 
     <!-- ChatViewModel system messages -->
     <string name="cmd_system_set">System prompt set: %1$s</string>

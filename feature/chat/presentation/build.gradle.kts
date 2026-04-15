@@ -15,6 +15,8 @@ kotlin {
             implementation(libs.material3.adaptive)
             implementation(libs.material3.adaptive.layout)
             implementation(libs.material3.adaptive.navigation)
+
+            implementation(libs.jetbrains.compose.preview)
         }
     }
 }

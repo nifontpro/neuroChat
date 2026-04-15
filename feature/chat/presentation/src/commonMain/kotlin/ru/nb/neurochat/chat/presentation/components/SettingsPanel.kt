@@ -43,6 +43,16 @@ import ru.nb.neurochat.chat.presentation.generated.resources.label_reset_setting
 import ru.nb.neurochat.chat.presentation.generated.resources.label_show_statistics
 import ru.nb.neurochat.chat.presentation.generated.resources.label_context_all
 import ru.nb.neurochat.chat.presentation.generated.resources.label_context_window
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_chars
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_completion_tokens
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_duration
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_empty
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_prompt_tokens
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_section
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_session_total
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_speed
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_tokens
+import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_total_tokens
 import ru.nb.neurochat.chat.presentation.generated.resources.label_temperature
 import ru.nb.neurochat.chat.presentation.generated.resources.label_temperature_default
 import ru.nb.neurochat.chat.presentation.generated.resources.label_thinking_mode
@@ -51,6 +61,7 @@ import ru.nb.neurochat.chat.presentation.generated.resources.status_offline
 import ru.nb.neurochat.chat.presentation.generated.resources.status_online
 import ru.nb.neurochat.chat.presentation.ChatState
 import ru.nb.neurochat.domain.model.AVAILABLE_MODELS
+import ru.nb.neurochat.domain.model.ChatRole
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +106,11 @@ fun SettingsPanel(
                     MaterialTheme.colorScheme.error,
             )
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            // Statistics block
+            if (state.showStatistics) {
+                StatisticsSection(state = state)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
 
             // Model dropdown
             Text(
@@ -266,5 +281,85 @@ fun SettingsPanel(
                 Text(text = stringResource(Res.string.label_reset_settings))
             }
         }
+    }
+}
+
+@Composable
+private fun StatisticsSection(
+    state: ChatState,
+    modifier: Modifier = Modifier,
+) {
+    val contentColor = MaterialTheme.colorScheme.onSurface
+    val valueColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    val lastResponseStats = state.messages.lastOrNull { it.role == ChatRole.Assistant }?.statistics
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.label_stats_section),
+            style = MaterialTheme.typography.titleSmall,
+            color = contentColor,
+        )
+
+        if (lastResponseStats == null && state.lastUsage == null) {
+            Text(
+                text = stringResource(Res.string.label_stats_empty),
+                style = MaterialTheme.typography.bodySmall,
+                color = valueColor,
+            )
+            return@Column
+        }
+
+        lastResponseStats?.let { stats ->
+            val durationSec = kotlin.math.round(stats.durationMs / 100.0) / 10.0
+            val speed = kotlin.math.round(stats.tokensPerSecond * 10.0) / 10.0
+            Text(
+                text = stringResource(Res.string.label_stats_duration, durationSec.toString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = valueColor,
+            )
+            Text(
+                text = stringResource(Res.string.label_stats_tokens, stats.tokenCount.toString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = valueColor,
+            )
+            Text(
+                text = stringResource(Res.string.label_stats_speed, speed.toString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = valueColor,
+            )
+            Text(
+                text = stringResource(Res.string.label_stats_chars, stats.charCount.toString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = valueColor,
+            )
+        }
+
+        state.lastUsage?.let { usage ->
+            Text(
+                text = stringResource(Res.string.label_stats_prompt_tokens, usage.promptTokens.toString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = valueColor,
+            )
+            Text(
+                text = stringResource(Res.string.label_stats_completion_tokens, usage.completionTokens.toString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = valueColor,
+            )
+            Text(
+                text = stringResource(Res.string.label_stats_total_tokens, usage.totalTokens.toString()),
+                style = MaterialTheme.typography.bodySmall,
+                color = valueColor,
+            )
+        }
+
+        Text(
+            text = stringResource(Res.string.label_stats_session_total, state.sessionTotalTokens.toString()),
+            style = MaterialTheme.typography.bodySmall,
+            color = valueColor,
+        )
     }
 }
