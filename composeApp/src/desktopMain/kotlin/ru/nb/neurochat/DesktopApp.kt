@@ -27,6 +27,8 @@ import ru.nb.neurochat.chat.presentation.ChatAction
 import ru.nb.neurochat.chat.presentation.ChatViewModel
 import ru.nb.neurochat.designsystem.theme.NeuroChatTheme
 
+// Корень Desktop UI. На macOS поверх содержимого добавляется свой «сливающийся» TitleBar
+// (см. настройки apple.awt.* в main.kt). На Windows/Linux используется системный заголовок.
 @Composable
 fun DesktopApp(isMac: Boolean) {
     NeuroChatTheme {

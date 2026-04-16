@@ -16,7 +16,6 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readLineStrict
-import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.serialization.json.Json
@@ -31,6 +30,10 @@ import ru.nb.neurochat.domain.model.ApiSettings
 import ru.nb.neurochat.domain.model.StreamToken
 import ru.nb.neurochat.domain.model.TokenUsage
 
+// OpenAI-совместимый клиент. Работает с любыми провайдерами, поддерживающими REST /chat/completions
+// с SSE-стримингом (OpenAI, LiteLLM, OpenRouter, локальный llama.cpp и т.д.).
+// baseSettings задаются один раз на уровне DI (URL, ключ, таймаут). Конкретные настройки запроса
+// (модель, температура, thinking) передаются в chatStream(settings) — могут меняться динамически.
 internal class OpenAiClient(private val baseSettings: ApiSettings) {
 
     private val log = Logger.withTag("OpenAiClient")
@@ -62,10 +65,15 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
         expectSuccess = false
     }
 
+    // Стриминг ответа модели. Возвращает Flow<StreamToken>, где каждый токен содержит
+    // либо content/reasoningContent, либо финальный usage (от провайдера, поле usage в SSE).
+    // channelFlow — чтобы можно было суспендить send() и прозрачно отменяться при cancel из VM.
     fun chatStream(messages: List<MessageDto>, settings: ApiSettings): Flow<StreamToken> =
         channelFlow {
             log.i { "→ ${baseSettings.baseUrl}, model=${settings.model}" }
 
+            // Anthropic-extension: thinking требует temperature=1.0. Для обычного запроса
+            // используем пользовательскую (может быть null — тогда провайдер берёт дефолт).
             val thinking: ThinkingConfig? = settings.thinkingBudget?.let {
                 ThinkingConfig(type = "enabled", budgetTokens = it)
             }
@@ -90,6 +98,8 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
                     throw IllegalStateException("HTTP ${response.status.value}: ${response.bodyAsText()}")
                 }
 
+                // Некоторые провайдеры на ошибке/отсутствии стриминга возвращают обычный JSON —
+                // обрабатываем этот fallback как одноразовый токен.
                 val ct = response.headers["Content-Type"] ?: ""
                 if (!ct.contains("event-stream")) {
                     val body = response.bodyAsText()
@@ -106,6 +116,7 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
                     return@execute
                 }
 
+                // Читаем SSE построчно. Формат: "data: {json}\n\n", финальный маркер "data: [DONE]".
                 var tokenCount = 0
                 val channel = response.bodyAsChannel()
                 while (!channel.isClosedForRead) {

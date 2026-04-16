@@ -8,6 +8,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.first
 
+// Хранилище пользовательских настроек поверх DataStore Preferences (AndroidX).
+// DataStore создаётся platform-specific (createDataStore.android/desktop/ios.kt) и регистрируется в DI.
+// SavedSettings — снимок, который загружается при старте VM (см. loadSavedSettings).
 class UserSettingsStorage(
     private val dataStore: DataStore<Preferences>,
 ) {

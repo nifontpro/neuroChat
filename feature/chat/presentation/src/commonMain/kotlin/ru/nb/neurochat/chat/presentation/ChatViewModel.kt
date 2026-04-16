@@ -35,6 +35,12 @@ import ru.nb.neurochat.domain.model.ResponseStatistics
 import ru.nb.neurochat.domain.repository.IChatRepository
 import kotlin.time.TimeSource
 
+// ViewModel фичи «Чат»:
+//   - хранит текущий ChatState и отдаёт его как StateFlow
+//   - принимает ChatAction (MVI-like), мутирует state
+//   - управляет стримом от репозитория: накопление контента, подсчёт статистики, usage
+//   - сохраняет/восстанавливает настройки и историю (DataStore + Room)
+//   - одноразовые события (ошибки) — через Channel<ChatEvent>
 class ChatViewModel(
     private val baseSettings: ApiSettings,
     private val repository: IChatRepository,
@@ -57,6 +63,8 @@ class ChatViewModel(
         )
     )
 
+    // onStart триггерится при первом подписчике — поднимаем фоновые наблюдатели и загружаем
+    // сохранённое состояние. WhileSubscribed(5s) — переживаем configuration changes без перезапуска.
     val state = _state
         .onStart {
             observeConnectivity()
@@ -124,10 +132,15 @@ class ChatViewModel(
         }
     }
 
+    // Отправка нового сообщения или обработка slash-команды.
+    // Логика стрима: добавляем пустое assistant-сообщение, обрезаем историю по maxContextMessages,
+    // накапливаем токены через StringBuilder, по каждому чанку обновляем последнее сообщение.
+    // В конце пишем итоговую статистику и сохраняем в историю.
     private fun sendMessage() {
         val text = _state.value.inputText.trim()
         if (text.isBlank() || _state.value.isLoading) return
 
+        // Команды типа /t, /think, /system — не шлём на сервер, обрабатываем локально.
         if (text.startsWith("/")) {
             _state.update { it.copy(inputText = "") }
             viewModelScope.launch { handleCommand(text) }
@@ -217,6 +230,7 @@ class ChatViewModel(
         }
     }
 
+    // Slash-команды — быстрый способ поменять настройки из поля ввода, без открытия панели.
     private suspend fun handleCommand(text: String) {
         val parts = text.split(" ", limit = 2)
         val cmd = parts[0].lowercase()

@@ -3,6 +3,11 @@ package ru.nb.neurochat.data.model
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+// DTO для OpenAI-совместимого API /chat/completions.
+// Все internal — за пределы core:data не утекают, наружу уходят доменные модели (см. ChatRepository).
+
+// Тело POST /chat/completions. stream=true + streamOptions.includeUsage — просим провайдера
+// включать usage в финальный SSE-чанк (иначе статистика токенов по API не придёт).
 @Serializable
 internal data class ChatRequest(
     val model: String,
@@ -18,6 +23,7 @@ internal data class StreamOptions(
     @SerialName("include_usage") val includeUsage: Boolean = true,
 )
 
+// Расширение Anthropic (extended thinking). Для других провайдеров поле просто игнорируется.
 @Serializable
 internal data class ThinkingConfig(
     val type: String,
@@ -30,6 +36,7 @@ internal data class MessageDto(
     val content: String,
 )
 
+// SSE-чанк стриминга. usage приходит только в финальном чанке (при includeUsage=true).
 @Serializable
 internal data class ChatStreamChunk(
     val choices: List<StreamChoice>,
@@ -55,6 +62,7 @@ internal data class StreamDelta(
     @SerialName("reasoning_content") val reasoningContent: String? = null,
 )
 
+// Fallback для не-стримингового ответа (например, когда провайдер вернул обычный JSON).
 @Serializable
 internal data class ChatCompletionResponse(
     val choices: List<CompletionChoice>,
@@ -72,6 +80,7 @@ internal data class CompletionMessage(
     val content: String? = null,
 )
 
+// Формат ошибки, которую может прислать провайдер вместо/внутри SSE-стрима.
 @Serializable
 internal data class StreamErrorChunk(
     val error: StreamError? = null,

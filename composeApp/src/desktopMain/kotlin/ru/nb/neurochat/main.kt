@@ -13,7 +13,12 @@ import ru.nb.neurochat.data.db.DatabaseFactory
 import ru.nb.neurochat.data.preferences.createDataStore
 import ru.nb.neurochat.di.initKoin
 
+// Точка входа Desktop-приложения.
+// Ответственности: инициализация Koin с platform-specific зависимостями, восстановление размера
+// и положения окна, оформление заголовка окна для macOS (сливаемый с контентом).
 fun main() {
+    // Platform-specific зависимости — доступны только в desktopMain, собираются здесь, а в
+    // общих модулях получаются через Koin (см. dataModule, chatModule).
     initKoin(
         platformModules = {
             single { ConnectivityObserver() }
@@ -22,6 +27,7 @@ fun main() {
         }
     )
 
+    // Восстанавливаем сохранённую геометрию окна, если есть; иначе — центр экрана, 900x700.
     val windowStateStorage = WindowStateStorage()
     val savedBounds = windowStateStorage.load()
     val isMac = System.getProperty("os.name").lowercase().contains("mac")
@@ -42,6 +48,8 @@ fun main() {
                 WindowPlacement.Floating,
         )
 
+        // Сохраняем bounds окна перед выходом. Maximized-окно сохраняется без координат —
+        // при следующем запуске откроется снова maximized.
         val onClose: () -> Unit = {
             val pos = windowState.position
             windowStateStorage.save(
@@ -61,6 +69,8 @@ fun main() {
             state = windowState,
             title = "NeuroChat",
         ) {
+            // macOS: объединяем заголовок окна с содержимым (borderless-look). На Windows/Linux
+            // эти свойства не применяются — там остаётся стандартный заголовок платформы.
             if (isMac) {
                 window.rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
                 window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
