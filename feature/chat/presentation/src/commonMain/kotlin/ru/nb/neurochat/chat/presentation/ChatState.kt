@@ -2,12 +2,13 @@ package ru.nb.neurochat.chat.presentation
 
 import ru.nb.neurochat.domain.model.ChatMessage
 import ru.nb.neurochat.domain.model.TokenUsage
+import ru.nb.neurochat.domain.util.DataError
 
 data class ChatState(
     val messages: List<ChatMessage> = emptyList(),
     val inputText: String = "",
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: DataError? = null,
     val currentModel: String = "",
     val currentTemperature: Double? = null,
     val thinkingEnabled: Boolean = false,

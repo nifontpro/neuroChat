@@ -46,4 +46,15 @@
     <string name="cmd_unknown">Неизвестная команда. Напиши /? для справки.</string>
     <string name="cmd_model_set">Модель: %1$s</string>
     <string name="error_unknown">Неизвестная ошибка</string>
+    <string name="error_bad_request">Некорректный запрос</string>
+    <string name="error_unauthorized">Ошибка авторизации: проверьте API-ключ</string>
+    <string name="error_forbidden">Доступ запрещён</string>
+    <string name="error_not_found">Эндпоинт не найден</string>
+    <string name="error_request_timeout">Превышено время ожидания</string>
+    <string name="error_too_many_requests">Слишком много запросов, подождите</string>
+    <string name="error_no_internet">Нет подключения к сети</string>
+    <string name="error_server">Ошибка сервера</string>
+    <string name="error_service_unavailable">Сервис недоступен</string>
+    <string name="error_serialization">Не удалось разобрать ответ</string>
+    <string name="error_not_connected">Нет соединения</string>
 </resources>

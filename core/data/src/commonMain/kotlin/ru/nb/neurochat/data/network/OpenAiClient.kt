@@ -18,6 +18,7 @@ import io.ktor.http.isSuccess
 import io.ktor.utils.io.readLineStrict
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import ru.nb.neurochat.data.model.ChatCompletionResponse
 import ru.nb.neurochat.data.model.ChatRequest
@@ -29,11 +30,15 @@ import ru.nb.neurochat.data.model.ThinkingConfig
 import ru.nb.neurochat.domain.model.ApiSettings
 import ru.nb.neurochat.domain.model.StreamToken
 import ru.nb.neurochat.domain.model.TokenUsage
+import ru.nb.neurochat.domain.util.DataError
+
+private const val CONNECT_TIMEOUT_MS = 30_000L
+private const val THINKING_TEMPERATURE = 1.0
+private const val SSE_DATA_PREFIX = "data: "
+private const val SSE_DONE_MARKER = "[DONE]"
 
 // OpenAI-совместимый клиент. Работает с любыми провайдерами, поддерживающими REST /chat/completions
 // с SSE-стримингом (OpenAI, LiteLLM, OpenRouter, локальный llama.cpp и т.д.).
-// baseSettings задаются один раз на уровне DI (URL, ключ, таймаут). Конкретные настройки запроса
-// (модель, температура, thinking) передаются в chatStream(settings) — могут меняться динамически.
 internal class OpenAiClient(private val baseSettings: ApiSettings) {
 
     private val log = Logger.withTag("OpenAiClient")
@@ -48,7 +53,7 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
     private val client = HttpClient {
         install(HttpTimeout) {
             requestTimeoutMillis = baseSettings.timeoutSeconds * 1_000
-            connectTimeoutMillis = 30_000
+            connectTimeoutMillis = CONNECT_TIMEOUT_MS
             socketTimeoutMillis = baseSettings.timeoutSeconds * 1_000
         }
         install(DefaultRequest) {
@@ -65,98 +70,139 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
         expectSuccess = false
     }
 
-    // Стриминг ответа модели. Возвращает Flow<StreamToken>, где каждый токен содержит
-    // либо content/reasoningContent, либо финальный usage (от провайдера, поле usage в SSE).
-    // channelFlow — чтобы можно было суспендить send() и прозрачно отменяться при cancel из VM.
+    /**
+     * Стриминг ответа модели. Бросает [ApiException] при HTTP/SSE ошибке —
+     * вышестоящий ChatRepository мапит её в Result.Failure(DataError).
+     */
     fun chatStream(messages: List<MessageDto>, settings: ApiSettings): Flow<StreamToken> =
         channelFlow {
             log.i { "→ ${baseSettings.baseUrl}, model=${settings.model}" }
 
-            // Anthropic-extension: thinking требует temperature=1.0. Для обычного запроса
-            // используем пользовательскую (может быть null — тогда провайдер берёт дефолт).
-            val thinking: ThinkingConfig? = settings.thinkingBudget?.let {
-                ThinkingConfig(type = "enabled", budgetTokens = it)
-            }
-            val temperature = if (thinking != null) 1.0 else settings.temperature
-
-            val requestBody = json.encodeToString(
-                ChatRequest.serializer(),
-                ChatRequest(
-                    model = settings.model,
-                    messages = messages,
-                    temperature = temperature,
-                    stream = true,
-                    thinking = thinking,
-                    streamOptions = StreamOptions(),
-                )
-            )
+            val requestBody = buildRequestBody(messages, settings)
 
             client.preparePost("${baseSettings.baseUrl}/chat/completions") {
                 setBody(TextContent(requestBody, ContentType.Application.Json))
             }.execute { response ->
                 if (!response.status.isSuccess()) {
-                    throw IllegalStateException("HTTP ${response.status.value}: ${response.bodyAsText()}")
+                    val body = response.bodyAsText()
+                    log.w { "HTTP ${response.status.value}: $body" }
+                    throw ApiException(
+                        dataError = response.status.toDataError(),
+                        providerMessage = body.take(500).takeIf { it.isNotBlank() },
+                    )
                 }
 
-                // Некоторые провайдеры на ошибке/отсутствии стриминга возвращают обычный JSON —
-                // обрабатываем этот fallback как одноразовый токен.
                 val ct = response.headers["Content-Type"] ?: ""
                 if (!ct.contains("event-stream")) {
-                    val body = response.bodyAsText()
-                    val completion =
-                        runCatching { json.decodeFromString<ChatCompletionResponse>(body) }.getOrNull()
-                    val content = completion?.choices?.firstOrNull()?.message?.content
-                    if (content != null) {
-                        send(StreamToken(content, isThinking = false))
-                    } else {
-                        val error =
-                            runCatching { json.decodeFromString<StreamErrorChunk>(body) }.getOrNull()?.error
-                        if (error != null) throw IllegalStateException(error.message)
-                    }
+                    handleNonStreamingResponse(response.bodyAsText())
                     return@execute
                 }
 
-                // Читаем SSE построчно. Формат: "data: {json}\n\n", финальный маркер "data: [DONE]".
-                var tokenCount = 0
-                val channel = response.bodyAsChannel()
-                while (!channel.isClosedForRead) {
-                    val line = channel.readLineStrict() ?: break
-                    if (!line.startsWith("data: ")) continue
-                    val data = line.removePrefix("data: ").trim()
-                    if (data == "[DONE]") break
-
-                    val chunk =
-                        runCatching { json.decodeFromString<ChatStreamChunk>(data) }.getOrNull()
-                    if (chunk != null) {
-                        val delta = chunk.choices.firstOrNull()?.delta
-                        delta?.reasoningContent?.let {
-                            send(StreamToken(it, isThinking = true))
-                            tokenCount++
-                        }
-                        delta?.content?.let {
-                            send(StreamToken(it, isThinking = false))
-                            tokenCount++
-                        }
-                        chunk.usage?.let { u ->
-                            send(StreamToken(
-                                text = "",
-                                usage = TokenUsage(
-                                    promptTokens = u.promptTokens,
-                                    completionTokens = u.completionTokens,
-                                    totalTokens = u.totalTokens,
-                                )
-                            ))
-                        }
-                        continue
-                    }
-
-                    val streamError =
-                        runCatching { json.decodeFromString<StreamErrorChunk>(data) }.getOrNull()?.error
-                    if (streamError != null) throw IllegalStateException(streamError.message)
-                }
-                log.i { "SSE done, tokens=$tokenCount" }
+                consumeSseStream(response.bodyAsChannel())
             }
         }
+
+    private fun buildRequestBody(messages: List<MessageDto>, settings: ApiSettings): String {
+        // Anthropic-extension: thinking требует temperature=1.0.
+        val thinking: ThinkingConfig? = settings.thinkingBudget?.let {
+            ThinkingConfig(type = "enabled", budgetTokens = it)
+        }
+        val temperature = if (thinking != null) THINKING_TEMPERATURE else settings.temperature
+
+        return json.encodeToString(
+            ChatRequest.serializer(),
+            ChatRequest(
+                model = settings.model,
+                messages = messages,
+                temperature = temperature,
+                stream = true,
+                thinking = thinking,
+                streamOptions = StreamOptions(),
+            )
+        )
+    }
+
+    private suspend fun kotlinx.coroutines.channels.ProducerScope<StreamToken>.handleNonStreamingResponse(
+        body: String,
+    ) {
+        val completion = decodeOrNull<ChatCompletionResponse>(body, "non-stream completion")
+        val content = completion?.choices?.firstOrNull()?.message?.content
+        if (content != null) {
+            send(StreamToken(content, isThinking = false))
+            return
+        }
+
+        val error = decodeOrNull<StreamErrorChunk>(body, "non-stream error")?.error
+        if (error != null) {
+            throw ApiException(
+                dataError = DataError.Remote.UNKNOWN,
+                providerMessage = error.message,
+            )
+        }
+    }
+
+    private suspend fun kotlinx.coroutines.channels.ProducerScope<StreamToken>.consumeSseStream(
+        channel: io.ktor.utils.io.ByteReadChannel,
+    ) {
+        var tokenCount = 0
+        while (!channel.isClosedForRead) {
+            val line = channel.readLineStrict() ?: break
+            if (!line.startsWith(SSE_DATA_PREFIX)) continue
+            val data = line.removePrefix(SSE_DATA_PREFIX).trim()
+            if (data == SSE_DONE_MARKER) break
+
+            val chunk = decodeOrNull<ChatStreamChunk>(data, "stream chunk")
+            if (chunk != null) {
+                tokenCount += emitChunkTokens(chunk)
+                continue
+            }
+
+            // Если не chunk — пробуем как ошибку от провайдера.
+            val streamError = decodeOrNull<StreamErrorChunk>(data, "stream error")?.error
+            if (streamError != null) {
+                throw ApiException(
+                    dataError = DataError.Remote.UNKNOWN,
+                    providerMessage = streamError.message,
+                )
+            }
+        }
+        log.i { "SSE done, tokens=$tokenCount" }
+    }
+
+    private suspend fun kotlinx.coroutines.channels.ProducerScope<StreamToken>.emitChunkTokens(
+        chunk: ChatStreamChunk,
+    ): Int {
+        var emitted = 0
+        val delta = chunk.choices.firstOrNull()?.delta
+        delta?.reasoningContent?.let {
+            send(StreamToken(it, isThinking = true))
+            emitted++
+        }
+        delta?.content?.let {
+            send(StreamToken(it, isThinking = false))
+            emitted++
+        }
+        chunk.usage?.let { u ->
+            send(
+                StreamToken(
+                    text = "",
+                    usage = TokenUsage(
+                        promptTokens = u.promptTokens,
+                        completionTokens = u.completionTokens,
+                        totalTokens = u.totalTokens,
+                    ),
+                )
+            )
+        }
+        return emitted
+    }
+
+    private inline fun <reified T> decodeOrNull(raw: String, label: String): T? = try {
+        json.decodeFromString<T>(raw)
+    } catch (e: SerializationException) {
+        log.v { "skip $label: ${e.message}; raw=${raw.take(200)}" }
+        null
+    }
 
     fun close() = client.close()
 }

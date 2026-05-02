@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <!-- Desktop title bar (macOS) -->
+    <string name="desktop_title_format">NeuroChat  ·  %1$s</string>
+    <string name="desktop_settings_icon">⚙</string>
+    <string name="desktop_clear">Clear</string>
+</resources>

@@ -46,4 +46,15 @@
     <string name="cmd_unknown">Unknown command. Type /? for help.</string>
     <string name="cmd_model_set">Model: %1$s</string>
     <string name="error_unknown">Unknown error</string>
+    <string name="error_bad_request">Invalid request</string>
+    <string name="error_unauthorized">Authorization failed: check your API key</string>
+    <string name="error_forbidden">Access denied</string>
+    <string name="error_not_found">Endpoint not found</string>
+    <string name="error_request_timeout">Request timed out</string>
+    <string name="error_too_many_requests">Too many requests, please slow down</string>
+    <string name="error_no_internet">No internet connection</string>
+    <string name="error_server">Server error</string>
+    <string name="error_service_unavailable">Service unavailable</string>
+    <string name="error_serialization">Failed to parse response</string>
+    <string name="error_not_connected">No connection</string>
 </resources>

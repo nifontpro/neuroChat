@@ -4,7 +4,16 @@ import kotlinx.coroutines.flow.Flow
 import ru.nb.neurochat.domain.model.ApiSettings
 import ru.nb.neurochat.domain.model.ChatMessage
 import ru.nb.neurochat.domain.model.StreamToken
+import ru.nb.neurochat.domain.util.DataError
+import ru.nb.neurochat.domain.util.Result
 
 interface IChatRepository {
-    fun streamMessage(history: List<ChatMessage>, settings: ApiSettings): Flow<StreamToken>
+    /**
+     * Стрим токенов от LLM. Каждый элемент — Result.Success(token) с очередным куском контента
+     * или Result.Failure(DataError) при сетевой/протокольной ошибке. После Failure стрим завершается.
+     */
+    fun streamMessage(
+        history: List<ChatMessage>,
+        settings: ApiSettings,
+    ): Flow<Result<StreamToken, DataError>>
 }

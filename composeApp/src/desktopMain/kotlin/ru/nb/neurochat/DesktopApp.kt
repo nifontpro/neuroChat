@@ -22,9 +22,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import ru.nb.neurochat.chat.presentation.ChatAction
 import ru.nb.neurochat.chat.presentation.ChatViewModel
+import ru.nb.neurochat.composeapp.generated.resources.Res
+import ru.nb.neurochat.composeapp.generated.resources.desktop_clear
+import ru.nb.neurochat.composeapp.generated.resources.desktop_settings_icon
+import ru.nb.neurochat.composeapp.generated.resources.desktop_title_format
 import ru.nb.neurochat.designsystem.theme.NeuroChatTheme
 
 // Корень Desktop UI. На macOS поверх содержимого добавляется свой «сливающийся» TitleBar
@@ -45,7 +50,8 @@ fun DesktopApp(isMac: Boolean) {
 private fun MacTitleBar() {
     val viewModel = koinViewModel<ChatViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val isWideScreen = currentWindowAdaptiveInfo().windowSizeClass.minWidthDp >= WIDTH_DP_EXPANDED_LOWER_BOUND
+    val isWideScreen =
+        currentWindowAdaptiveInfo().windowSizeClass.minWidthDp >= WIDTH_DP_EXPANDED_LOWER_BOUND
 
     Box(
         modifier = Modifier
@@ -53,15 +59,13 @@ private fun MacTitleBar() {
             .height(28.dp)
             .background(MaterialTheme.colorScheme.surface),
     ) {
-        // Название и модель по центру
         Text(
-            text = "NeuroChat  ·  ${state.currentModel}",
+            text = stringResource(Res.string.desktop_title_format, state.currentModel),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.align(Alignment.Center),
         )
 
-        // Кнопки справа
         Row(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
@@ -73,7 +77,11 @@ private fun MacTitleBar() {
                     onClick = { viewModel.onAction(ChatAction.OnSettingsClick) },
                     modifier = Modifier.size(28.dp),
                 ) {
-                    Text(text = "⚙", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = stringResource(Res.string.desktop_settings_icon),
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
             TextButton(
@@ -81,7 +89,7 @@ private fun MacTitleBar() {
                 modifier = Modifier.height(28.dp),
             ) {
                 Text(
-                    text = "Очистить",
+                    text = stringResource(Res.string.desktop_clear),
                     style = MaterialTheme.typography.labelMedium,
                 )
             }

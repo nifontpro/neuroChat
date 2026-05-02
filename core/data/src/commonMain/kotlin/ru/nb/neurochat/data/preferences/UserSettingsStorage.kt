@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.flow.first
 
 // Хранилище пользовательских настроек поверх DataStore Preferences (AndroidX).
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.first
 class UserSettingsStorage(
     private val dataStore: DataStore<Preferences>,
 ) {
+    private val log = Logger.withTag("UserSettings")
     private val keyModel = stringPreferencesKey("model")
     private val keyTemperature = doublePreferencesKey("temperature")
     private val keyThinkingEnabled = intPreferencesKey("thinking_enabled")
@@ -68,6 +70,7 @@ class UserSettingsStorage(
 
     suspend fun clear() {
         dataStore.edit { it.clear() }
+        log.i { "user settings cleared" }
     }
 }
 

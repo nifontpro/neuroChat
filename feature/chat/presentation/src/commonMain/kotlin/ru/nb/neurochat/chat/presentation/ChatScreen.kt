@@ -25,13 +25,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_EXPANDED_LOWER_BOUND
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import org.koin.compose.viewmodel.koinViewModel
 import ru.nb.neurochat.chat.presentation.components.ChatInputBar
 import ru.nb.neurochat.chat.presentation.components.ChatTopBar
 import ru.nb.neurochat.chat.presentation.components.MessagesList
 import ru.nb.neurochat.chat.presentation.components.SettingsPanel
+import ru.nb.neurochat.chat.presentation.util.toMessageRes
 import ru.nb.neurochat.presentation.util.ObserveAsEvents
 import ru.nb.neurochat.presentation.util.isDesktop
+
+private val SETTINGS_PANEL_MAX_WIDTH = 320.dp
 
 // Точка входа фичи «Чат». Подписывается на state/events ViewModel и передаёт в stateless ChatScreen.
 @Composable
@@ -46,7 +50,8 @@ fun ChatScreenRoot(
         when (event) {
             is ChatEvent.OnError -> {
                 scope.launch {
-                    snackbarHostState.showSnackbar(message = event.message)
+                    val message = getString(event.error.toMessageRes())
+                    snackbarHostState.showSnackbar(message = message)
                 }
             }
         }
@@ -59,10 +64,7 @@ fun ChatScreenRoot(
     )
 }
 
-// Адаптивная разметка:
-//   - широкий экран (desktop/tablet landscape): SettingsPanel слева, чат справа
-//   - узкий экран (mobile): только чат, настройки открываются ModalBottomSheet
-@OptIn(ExperimentalMaterial3Api::class)
+// Адаптивная разметка: широкий экран -> Row(SettingsPanel | Chat), узкий -> Chat + ModalBottomSheet.
 @Composable
 fun ChatScreen(
     state: ChatState,
@@ -73,59 +75,77 @@ fun ChatScreen(
     val isWideScreen = windowSizeClass.minWidthDp >= WIDTH_DP_EXPANDED_LOWER_BOUND
 
     if (isWideScreen) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            SettingsPanel(
-                state = state,
-                onAction = onAction,
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .widthIn(max = 320.dp)
-                    .weight(0.3f),
-            )
-            VerticalDivider()
-            ChatContent(
-                state = state,
-                onAction = onAction,
-                showSettingsButton = false,
-                showTopBarInfo = !isDesktop,
-                showClearButton = !isDesktop,
-                showTopBar = !isDesktop,
-                snackbarHostState = snackbarHostState,
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .weight(0.7f),
-            )
-        }
+        WideLayout(state, onAction, snackbarHostState)
     } else {
+        NarrowLayout(state, onAction, snackbarHostState)
+    }
+}
+
+@Composable
+private fun WideLayout(
+    state: ChatState,
+    onAction: (ChatAction) -> Unit,
+    snackbarHostState: SnackbarHostState,
+) {
+    Row(modifier = Modifier.fillMaxSize()) {
+        SettingsPanel(
+            state = state,
+            onAction = onAction,
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = SETTINGS_PANEL_MAX_WIDTH)
+                .weight(0.3f),
+        )
+        VerticalDivider()
         ChatContent(
             state = state,
             onAction = onAction,
-            showSettingsButton = !isDesktop,
+            showSettingsButton = false,
             showTopBarInfo = !isDesktop,
             showClearButton = !isDesktop,
             showTopBar = !isDesktop,
             snackbarHostState = snackbarHostState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxHeight()
+                .weight(0.7f),
         )
+    }
+}
 
-        if (state.isSettingsOpen) {
-            ModalBottomSheet(
-                onDismissRequest = { onAction(ChatAction.OnDismissSettings) },
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            ) {
-                SettingsPanel(
-                    state = state,
-                    onAction = onAction,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NarrowLayout(
+    state: ChatState,
+    onAction: (ChatAction) -> Unit,
+    snackbarHostState: SnackbarHostState,
+) {
+    ChatContent(
+        state = state,
+        onAction = onAction,
+        showSettingsButton = !isDesktop,
+        showTopBarInfo = !isDesktop,
+        showClearButton = !isDesktop,
+        showTopBar = !isDesktop,
+        snackbarHostState = snackbarHostState,
+        modifier = Modifier.fillMaxSize(),
+    )
+
+    if (state.isSettingsOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { onAction(ChatAction.OnDismissSettings) },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            SettingsPanel(
+                state = state,
+                onAction = onAction,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
 
 // Собственно чат: TopBar + список сообщений + строка ввода. Используется как single-pane (mobile)
-// или правая часть Row (wide screen). Разделён на internal, чтобы использовался в Preview (androidMain).
-@OptIn(ExperimentalMaterial3Api::class)
+// или правая часть Row (wide screen). internal — чтобы был доступен в Preview (androidMain).
 @Composable
 internal fun ChatContent(
     state: ChatState,
@@ -158,10 +178,7 @@ internal fun ChatContent(
                 .padding(innerPadding)
                 .imePadding(),
         ) {
-            MessagesList(
-                state = state,
-                modifier = Modifier.weight(1f),
-            )
+            MessagesList(state = state, modifier = Modifier.weight(1f))
             ChatInputBar(
                 text = state.inputText,
                 isLoading = state.isLoading,

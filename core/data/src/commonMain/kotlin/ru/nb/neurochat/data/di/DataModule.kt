@@ -17,9 +17,16 @@ fun dataModule(settings: ApiSettings) = module {
     single<IChatRepository> { ChatRepository(get()) }
     single { UserSettingsStorage(get()) }
     single<NeuroChatDatabase> {
+        // ВАЖНО (миграции Room):
+        // — exportSchema = true (включён в RoomConventionPlugin), схемы лежат в core/data/schemas/.
+        // — При изменении ChatMessageEntity нужно поднять @Database(version = N+1) и добавить Migration
+        //   через .addMigrations(...) перед .build(). До тех пор fallbackToDestructiveMigration
+        //   стирает локальную историю при несовпадении версии — приемлемо для текущего этапа,
+        //   когда данные ещё не критичны.
         get<DatabaseFactory>()
             .create()
             .setDriver(BundledSQLiteDriver())
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
     single { get<NeuroChatDatabase>().chatMessageDao() }

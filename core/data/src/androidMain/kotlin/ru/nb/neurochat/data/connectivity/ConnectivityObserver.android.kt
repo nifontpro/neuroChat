@@ -5,18 +5,27 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import androidx.core.content.getSystemService
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOf
 
 actual class ConnectivityObserver(
     context: Context,
 ) {
-    private val connectivityManager = context.getSystemService<ConnectivityManager>()!!
+    private val log = Logger.withTag("ConnectivityObserver")
+    private val connectivityManager = context.getSystemService<ConnectivityManager>()
 
-    actual val isConnected: Flow<Boolean> = callbackFlow {
-        val initiallyConnected = connectivityManager.activeNetwork?.let { network ->
-            connectivityManager.getNetworkCapabilities(network)?.hasCapability(
+    actual val isConnected: Flow<Boolean> = connectivityManager?.observe()
+        ?: run {
+            log.w { "ConnectivityManager unavailable — assuming offline" }
+            flowOf(false)
+        }
+
+    private fun ConnectivityManager.observe(): Flow<Boolean> = callbackFlow {
+        val initiallyConnected = activeNetwork?.let { network ->
+            getNetworkCapabilities(network)?.hasCapability(
                 NetworkCapabilities.NET_CAPABILITY_VALIDATED
             )
         } ?: false
@@ -51,10 +60,10 @@ actual class ConnectivityObserver(
             }
         }
 
-        connectivityManager.registerDefaultNetworkCallback(callback)
+        registerDefaultNetworkCallback(callback)
 
         awaitClose {
-            connectivityManager.unregisterNetworkCallback(callback)
+            unregisterNetworkCallback(callback)
         }
     }
 }

@@ -6,6 +6,10 @@ plugins {
     alias(libs.plugins.compose.hot.reload)
 }
 
+compose.resources {
+    packageOfResClass = "ru.nb.neurochat.composeapp.generated.resources"
+}
+
 kotlin {
     sourceSets {
         commonMain.dependencies {

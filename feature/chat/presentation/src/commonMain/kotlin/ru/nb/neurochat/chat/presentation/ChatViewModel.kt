@@ -2,11 +2,11 @@ package ru.nb.neurochat.chat.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -24,7 +24,6 @@ import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_hint
 import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_off
 import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_on
 import ru.nb.neurochat.chat.presentation.generated.resources.cmd_unknown
-import ru.nb.neurochat.chat.presentation.generated.resources.error_unknown
 import ru.nb.neurochat.data.connectivity.ConnectivityObserver
 import ru.nb.neurochat.data.preferences.UserSettingsStorage
 import ru.nb.neurochat.domain.datasource.IChatHistoryDataSource
@@ -33,21 +32,33 @@ import ru.nb.neurochat.domain.model.ChatMessage
 import ru.nb.neurochat.domain.model.ChatRole
 import ru.nb.neurochat.domain.model.ResponseStatistics
 import ru.nb.neurochat.domain.repository.IChatRepository
+import ru.nb.neurochat.domain.usecase.BuildChatContextUseCase
+import ru.nb.neurochat.domain.usecase.CommandResult
+import ru.nb.neurochat.domain.usecase.HandleCommandUseCase
+import ru.nb.neurochat.domain.util.Result
 import kotlin.time.TimeSource
 
-// ViewModel фичи «Чат»:
-//   - хранит текущий ChatState и отдаёт его как StateFlow
-//   - принимает ChatAction (MVI-like), мутирует state
-//   - управляет стримом от репозитория: накопление контента, подсчёт статистики, usage
-//   - сохраняет/восстанавливает настройки и историю (DataStore + Room)
-//   - одноразовые события (ошибки) — через Channel<ChatEvent>
+internal const val DEFAULT_THINKING_BUDGET_TOKENS = 10_000
+private const val STATE_SUBSCRIPTION_TIMEOUT_MS = 5_000L
+
+/**
+ * ViewModel фичи «Чат». Тонкая координация:
+ * — хранит ChatState, отдаёт его как StateFlow;
+ * — диспатчит ChatAction на handlers;
+ * — запускает стрим репозитория, накапливает токены, обновляет последнее сообщение;
+ * — мапит CommandResult use case'а в системные сообщения с локализацией.
+ */
 class ChatViewModel(
     private val baseSettings: ApiSettings,
     private val repository: IChatRepository,
     private val connectivityObserver: ConnectivityObserver,
     private val settingsStorage: UserSettingsStorage,
     private val historyDataSource: IChatHistoryDataSource,
+    private val handleCommand: HandleCommandUseCase,
+    private val buildChatContext: BuildChatContextUseCase,
 ) : ViewModel() {
+
+    private val log = Logger.withTag("ChatViewModel")
 
     private var currentSettings = baseSettings
 
@@ -63,8 +74,6 @@ class ChatViewModel(
         )
     )
 
-    // onStart триггерится при первом подписчике — поднимаем фоновые наблюдатели и загружаем
-    // сохранённое состояние. WhileSubscribed(5s) — переживаем configuration changes без перезапуска.
     val state = _state
         .onStart {
             observeConnectivity()
@@ -73,7 +82,7 @@ class ChatViewModel(
         }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000L),
+            started = SharingStarted.WhileSubscribed(STATE_SUBSCRIPTION_TIMEOUT_MS),
             initialValue = _state.value,
         )
 
@@ -81,18 +90,12 @@ class ChatViewModel(
 
     fun onAction(action: ChatAction) {
         when (action) {
-            is ChatAction.OnInputChange -> {
-                _state.update { it.copy(inputText = action.text) }
-            }
+            is ChatAction.OnInputChange -> _state.update { it.copy(inputText = action.text) }
             ChatAction.OnSendMessage -> sendMessage()
             ChatAction.OnStopStreaming -> stopStreaming()
             ChatAction.OnClearHistory -> clearHistory()
-            ChatAction.OnSettingsClick -> {
-                _state.update { it.copy(isSettingsOpen = true) }
-            }
-            ChatAction.OnDismissSettings -> {
-                _state.update { it.copy(isSettingsOpen = false) }
-            }
+            ChatAction.OnSettingsClick -> _state.update { it.copy(isSettingsOpen = true) }
+            ChatAction.OnDismissSettings -> _state.update { it.copy(isSettingsOpen = false) }
             is ChatAction.OnSelectModel -> selectModel(action.model)
             is ChatAction.OnTemperatureChange -> updateTemperature(action.temperature)
             is ChatAction.OnThinkingToggle -> toggleThinking(action.enabled)
@@ -132,21 +135,20 @@ class ChatViewModel(
         }
     }
 
-    // Отправка нового сообщения или обработка slash-команды.
-    // Логика стрима: добавляем пустое assistant-сообщение, обрезаем историю по maxContextMessages,
-    // накапливаем токены через StringBuilder, по каждому чанку обновляем последнее сообщение.
-    // В конце пишем итоговую статистику и сохраняем в историю.
     private fun sendMessage() {
         val text = _state.value.inputText.trim()
         if (text.isBlank() || _state.value.isLoading) return
 
-        // Команды типа /t, /think, /system — не шлём на сервер, обрабатываем локально.
         if (text.startsWith("/")) {
             _state.update { it.copy(inputText = "") }
-            viewModelScope.launch { handleCommand(text) }
+            viewModelScope.launch { applyCommand(text) }
             return
         }
 
+        startStreamingForUserMessage(text)
+    }
+
+    private fun startStreamingForUserMessage(text: String) {
         val userMessage = ChatMessage(role = ChatRole.User, content = text)
         _state.update { it.copy(inputText = "", isLoading = true, error = null, lastUsage = null) }
 
@@ -157,57 +159,62 @@ class ChatViewModel(
                 )
             }
 
-            val contextMessages = _state.value.messages.dropLast(1).let { msgs ->
-                val limit = _state.value.maxContextMessages
-                if (limit > 0 && msgs.size > limit) msgs.takeLast(limit) else msgs
-            }
-            val history = buildList {
-                currentSettings.systemPrompt?.let { add(ChatMessage(ChatRole.System, it)) }
-                addAll(contextMessages)
-            }
+            val context = buildChatContext(
+                history = _state.value.messages.dropLast(1),
+                systemPrompt = currentSettings.systemPrompt,
+                maxContextMessages = _state.value.maxContextMessages,
+            )
 
             val accumulated = StringBuilder()
             var tokenCount = 0
             val timeMark = TimeSource.Monotonic.markNow()
             var streamError = false
 
-            repository.streamMessage(history, currentSettings)
-                .catch { e ->
-                    streamError = true
-                    _state.update { it.copy(isLoading = false, error = e.message) }
-                    eventChannel.send(ChatEvent.OnError(e.message ?: getString(Res.string.error_unknown)))
-                }
-                .collect { token ->
-                    token.usage?.let { usage ->
-                        _state.update { state ->
-                            state.copy(
-                                lastUsage = usage,
-                                sessionTotalTokens = state.sessionTotalTokens + usage.totalTokens,
-                            )
-                        }
+            log.i { "stream start: model=${currentSettings.model}, ctx=${context.size}" }
+            repository.streamMessage(context, currentSettings).collect { result ->
+                when (result) {
+                    is Result.Failure -> {
+                        streamError = true
+                        log.w { "stream failed: ${result.error}" }
+                        _state.update { it.copy(isLoading = false, error = result.error) }
+                        eventChannel.send(ChatEvent.OnError(result.error))
                     }
-                    if (!token.isThinking && token.text.isNotEmpty()) {
-                        accumulated.append(token.text)
-                        tokenCount++
-                        updateLastMessage(accumulated.toString())
-                    }
+                    is Result.Success -> consumeToken(result.data, accumulated)
+                        .also { if (it) tokenCount++ }
                 }
+            }
 
             val durationMs = timeMark.elapsedNow().inWholeMilliseconds
-            val statistics = ResponseStatistics(
-                durationMs = durationMs,
-                tokenCount = tokenCount,
-                charCount = accumulated.length,
+            updateLastMessageStatistics(
+                ResponseStatistics(durationMs, tokenCount, accumulated.length)
             )
-            updateLastMessageStatistics(statistics)
             _state.update { it.copy(isLoading = false) }
 
             if (!streamError) {
                 val assistantMessage = _state.value.messages.last()
                 historyDataSource.saveMessage(userMessage)
                 historyDataSource.saveMessage(assistantMessage)
+                log.i { "stream done: tokens=$tokenCount, durMs=$durationMs" }
             }
         }
+    }
+
+    /** @return true если получен текстовый токен (для подсчёта). */
+    private fun consumeToken(token: ru.nb.neurochat.domain.model.StreamToken, acc: StringBuilder): Boolean {
+        token.usage?.let { usage ->
+            _state.update { state ->
+                state.copy(
+                    lastUsage = usage,
+                    sessionTotalTokens = state.sessionTotalTokens + usage.totalTokens,
+                )
+            }
+        }
+        if (!token.isThinking && token.text.isNotEmpty()) {
+            acc.append(token.text)
+            updateLastMessage(acc.toString())
+            return true
+        }
+        return false
     }
 
     private fun updateLastMessage(text: String) {
@@ -230,56 +237,34 @@ class ChatViewModel(
         }
     }
 
-    // Slash-команды — быстрый способ поменять настройки из поля ввода, без открытия панели.
-    private suspend fun handleCommand(text: String) {
-        val parts = text.split(" ", limit = 2)
-        val cmd = parts[0].lowercase()
-        val arg = parts.getOrNull(1)?.trim() ?: ""
-
-        when (cmd) {
-            "/system" -> {
-                val prompt = arg.ifBlank { null }
-                currentSettings = currentSettings.copy(systemPrompt = prompt)
+    private suspend fun applyCommand(text: String) {
+        when (val result = handleCommand(text, currentSettings)) {
+            is CommandResult.SystemPromptChanged -> {
+                currentSettings = result.settings
+                val prompt = result.prompt
                 _state.update { it.copy(systemPrompt = prompt) }
                 postSystemMessage(
                     if (prompt != null) getString(Res.string.cmd_system_set, prompt)
                     else getString(Res.string.cmd_system_reset)
                 )
             }
-
-            "/t" -> {
-                val temp = arg.toDoubleOrNull()
-                if (temp != null && temp in 0.0..2.0) {
-                    currentSettings = currentSettings.copy(temperature = temp)
-                    _state.update { it.copy(currentTemperature = temp) }
-                    postSystemMessage(getString(Res.string.cmd_t_set, temp.toString()))
-                } else {
-                    postSystemMessage(getString(Res.string.cmd_t_hint))
-                }
+            is CommandResult.TemperatureChanged -> {
+                currentSettings = result.settings
+                _state.update { it.copy(currentTemperature = result.value) }
+                postSystemMessage(getString(Res.string.cmd_t_set, result.value.toString()))
             }
-
-            "/think" -> {
-                when (arg.lowercase()) {
-                    "on" -> {
-                        val budget = 10_000
-                        currentSettings = currentSettings.copy(thinkingBudget = budget)
-                        _state.update { it.copy(thinkingEnabled = true) }
-                        postSystemMessage(getString(Res.string.cmd_think_on, budget.toString()))
-                    }
-                    "off" -> {
-                        currentSettings = currentSettings.copy(thinkingBudget = null)
-                        _state.update { it.copy(thinkingEnabled = false) }
-                        postSystemMessage(getString(Res.string.cmd_think_off))
-                    }
-                    else -> postSystemMessage(getString(Res.string.cmd_think_hint))
-                }
+            is CommandResult.ThinkingChanged -> {
+                currentSettings = result.settings
+                _state.update { it.copy(thinkingEnabled = result.enabled) }
+                postSystemMessage(
+                    if (result.enabled) getString(Res.string.cmd_think_on, result.budget.toString())
+                    else getString(Res.string.cmd_think_off)
+                )
             }
-
-            "/?" -> {
-                postSystemMessage(getString(Res.string.cmd_help))
-            }
-
-            else -> postSystemMessage(getString(Res.string.cmd_unknown))
+            CommandResult.TemperatureHint -> postSystemMessage(getString(Res.string.cmd_t_hint))
+            CommandResult.ThinkingHint -> postSystemMessage(getString(Res.string.cmd_think_hint))
+            CommandResult.Help -> postSystemMessage(getString(Res.string.cmd_help))
+            CommandResult.UnknownCommand -> postSystemMessage(getString(Res.string.cmd_unknown))
         }
     }
 
@@ -321,7 +306,7 @@ class ChatViewModel(
     }
 
     private fun toggleThinking(enabled: Boolean) {
-        val budget = if (enabled) 10_000 else null
+        val budget = if (enabled) DEFAULT_THINKING_BUDGET_TOKENS else null
         currentSettings = currentSettings.copy(thinkingBudget = budget)
         _state.update { it.copy(thinkingEnabled = enabled) }
         viewModelScope.launch { settingsStorage.saveThinkingEnabled(enabled) }
@@ -351,9 +336,9 @@ class ChatViewModel(
 
     private fun clearHistory() {
         stopStreaming()
-        viewModelScope.launch {
-            historyDataSource.clearAll()
+        viewModelScope.launch { historyDataSource.clearAll() }
+        _state.update {
+            it.copy(messages = emptyList(), error = null, lastUsage = null, sessionTotalTokens = 0)
         }
-        _state.update { it.copy(messages = emptyList(), error = null, lastUsage = null, sessionTotalTokens = 0) }
     }
 }
