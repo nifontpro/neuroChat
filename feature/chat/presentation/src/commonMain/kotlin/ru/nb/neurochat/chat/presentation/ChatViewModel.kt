@@ -23,6 +23,9 @@ import ru.nb.neurochat.chat.presentation.generated.resources.cmd_t_set
 import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_hint
 import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_off
 import ru.nb.neurochat.chat.presentation.generated.resources.cmd_think_on
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_compact_done
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_compact_failed
+import ru.nb.neurochat.chat.presentation.generated.resources.cmd_compact_start
 import ru.nb.neurochat.chat.presentation.generated.resources.cmd_unknown
 import ru.nb.neurochat.data.connectivity.ConnectivityObserver
 import ru.nb.neurochat.data.preferences.UserSettingsStorage
@@ -40,6 +43,8 @@ import kotlin.time.TimeSource
 
 internal const val DEFAULT_THINKING_BUDGET_TOKENS = 10_000
 private const val STATE_SUBSCRIPTION_TIMEOUT_MS = 5_000L
+private const val COMPACT_SYSTEM_PROMPT =
+    "Summarize the following conversation concisely. Preserve all key facts, decisions, and context. Output only the summary, no preamble."
 
 /**
  * ViewModel фичи «Чат». Тонкая координация:
@@ -101,6 +106,7 @@ class ChatViewModel(
             is ChatAction.OnThinkingToggle -> toggleThinking(action.enabled)
             is ChatAction.OnSystemPromptChange -> updateSystemPrompt(action.prompt)
             is ChatAction.OnMaxContextChange -> updateMaxContext(action.count)
+            is ChatAction.OnMaxTokensChange -> updateMaxTokens(action.count)
             is ChatAction.OnToggleStatistics -> toggleStatistics(action.enabled)
             ChatAction.OnResetSettings -> resetSettings()
         }
@@ -124,6 +130,8 @@ class ChatViewModel(
             saved.systemPrompt?.let { updateSystemPrompt(it) }
             saved.maxContextMessages?.let { updateMaxContext(it) }
             saved.showStatistics?.let { toggleStatistics(it) }
+            saved.maxTokens?.let { updateMaxTokens(it) }
+            saved.conversationSummary?.let { _state.update { s -> s.copy(conversationSummary = it) } }
         }
     }
 
@@ -163,6 +171,7 @@ class ChatViewModel(
                 history = _state.value.messages.dropLast(1),
                 systemPrompt = currentSettings.systemPrompt,
                 maxContextMessages = _state.value.maxContextMessages,
+                conversationSummary = _state.value.conversationSummary,
             )
 
             val accumulated = StringBuilder()
@@ -265,6 +274,7 @@ class ChatViewModel(
             CommandResult.ThinkingHint -> postSystemMessage(getString(Res.string.cmd_think_hint))
             CommandResult.Help -> postSystemMessage(getString(Res.string.cmd_help))
             CommandResult.UnknownCommand -> postSystemMessage(getString(Res.string.cmd_unknown))
+            CommandResult.CompactRequested -> compactHistory()
         }
     }
 
@@ -300,6 +310,12 @@ class ChatViewModel(
         viewModelScope.launch { settingsStorage.saveMaxContext(count) }
     }
 
+    private fun updateMaxTokens(count: Int?) {
+        currentSettings = currentSettings.copy(maxTokens = count)
+        _state.update { it.copy(maxTokens = count) }
+        viewModelScope.launch { settingsStorage.saveMaxTokens(count) }
+    }
+
     private fun toggleStatistics(enabled: Boolean) {
         _state.update { it.copy(showStatistics = enabled) }
         viewModelScope.launch { settingsStorage.saveShowStatistics(enabled) }
@@ -314,7 +330,7 @@ class ChatViewModel(
 
     private fun resetSettings() {
         viewModelScope.launch {
-            settingsStorage.clear()
+            settingsStorage.clear() // clear() уже удаляет все ключи включая conversation_summary
             currentSettings = baseSettings
             _state.update {
                 it.copy(
@@ -323,10 +339,57 @@ class ChatViewModel(
                     thinkingEnabled = baseSettings.thinkingBudget != null,
                     systemPrompt = baseSettings.systemPrompt,
                     maxContextMessages = 0,
+                    maxTokens = null,
+                    conversationSummary = null,
                     showStatistics = false,
                 )
             }
         }
+    }
+
+    private suspend fun compactHistory() {
+        val messages = _state.value.messages.filter { it.role != ChatRole.System }
+        if (messages.isEmpty()) return
+
+        postSystemMessage(getString(Res.string.cmd_compact_start))
+        _state.update { it.copy(isLoading = true) }
+
+        val compactPrompt = buildList {
+            add(ChatMessage(ChatRole.System, COMPACT_SYSTEM_PROMPT))
+            addAll(messages)
+        }
+
+        val summary = StringBuilder()
+        var failed = false
+
+        repository.streamMessage(compactPrompt, currentSettings).collect { result ->
+            when (result) {
+                is Result.Failure -> {
+                    failed = true
+                    log.w { "compact failed: ${result.error}" }
+                }
+                is Result.Success -> {
+                    val token = result.data
+                    if (!token.isThinking && token.text.isNotEmpty()) summary.append(token.text)
+                }
+            }
+        }
+
+        _state.update { it.copy(isLoading = false) }
+
+        if (failed || summary.isBlank()) {
+            postSystemMessage(getString(Res.string.cmd_compact_failed))
+            return
+        }
+
+        val summaryText = summary.toString()
+        _state.update { it.copy(messages = emptyList(), conversationSummary = summaryText) }
+        viewModelScope.launch {
+            historyDataSource.clearAll()
+            settingsStorage.saveConversationSummary(summaryText)
+        }
+        postSystemMessage(getString(Res.string.cmd_compact_done))
+        log.i { "history compacted: ${summaryText.length} chars" }
     }
 
     private fun stopStreaming() {
@@ -336,9 +399,18 @@ class ChatViewModel(
 
     private fun clearHistory() {
         stopStreaming()
-        viewModelScope.launch { historyDataSource.clearAll() }
+        viewModelScope.launch {
+            historyDataSource.clearAll()
+            settingsStorage.saveConversationSummary(null)
+        }
         _state.update {
-            it.copy(messages = emptyList(), error = null, lastUsage = null, sessionTotalTokens = 0)
+            it.copy(
+                messages = emptyList(),
+                conversationSummary = null,
+                error = null,
+                lastUsage = null,
+                sessionTotalTokens = 0,
+            )
         }
     }
 }

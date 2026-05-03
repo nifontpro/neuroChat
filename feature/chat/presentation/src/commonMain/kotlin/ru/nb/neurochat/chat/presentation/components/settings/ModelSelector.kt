@@ -20,7 +20,10 @@ import ru.nb.neurochat.chat.presentation.generated.resources.Res
 import ru.nb.neurochat.chat.presentation.generated.resources.label_model
 import ru.nb.neurochat.domain.model.AVAILABLE_MODELS
 
-// Выпадающий список моделей. Текущая выделяется цветом primary.
+/** Выпадающий список моделей из [AVAILABLE_MODELS]. Текущая выделяется цветом primary.
+ * @param currentModel выбранная модель
+ * @param onSelect callback при выборе модели
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ModelSelector(

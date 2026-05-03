@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 
-// Системное сообщение — отображается по центру курсивом (команды /t, /think, подсказки).
+/** Системное сообщение — отображается по центру курсивом (команды /t, /think, подсказки). */
 @Composable
 internal fun SystemMessage(text: String) {
     Box(

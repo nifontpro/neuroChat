@@ -10,7 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
-// Обобщённая строка «подпись + Switch» для thinking/show-statistics и т.п.
+/** Обобщённая строка «подпись + Switch» для thinking/show-statistics и т.п.
+ * @param label текст подписи слева
+ * @param checked текущее состояние переключателя
+ * @param onCheckedChange callback при изменении состояния
+ */
 @Composable
 internal fun SwitchRow(
     label: String,

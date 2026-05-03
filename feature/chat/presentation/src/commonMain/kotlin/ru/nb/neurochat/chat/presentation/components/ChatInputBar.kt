@@ -29,8 +29,14 @@ import ru.nb.neurochat.chat.presentation.generated.resources.Res
 import ru.nb.neurochat.chat.presentation.generated.resources.message_input_placeholder
 import ru.nb.neurochat.chat.presentation.generated.resources.send_button
 
-// Строка ввода сообщения. Enter — отправка, Shift+Enter — перенос строки.
-// Пока идёт стриминг — вместо «отправить» показывается прогресс/кнопка остановки.
+/** Строка ввода сообщения. Enter — отправка, Shift+Enter — перенос строки.
+ * Пока идёт стриминг — вместо «отправить» показывается прогресс/кнопка остановки.
+ * @param text текущий текст в поле ввода
+ * @param isLoading true, если идёт стриминг ответа
+ * @param onTextChange callback при изменении текста
+ * @param onSend callback при отправке сообщения
+ * @param onStop callback при остановке стриминга
+ */
 @Composable
 fun ChatInputBar(
     text: String,

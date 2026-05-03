@@ -19,8 +19,14 @@ import ru.nb.neurochat.chat.presentation.generated.resources.clear
 import ru.nb.neurochat.chat.presentation.generated.resources.settings
 import ru.nb.neurochat.chat.presentation.generated.resources.title_app
 
-// Верхняя панель чата: заголовок + краткая сводка (модель, температура, thinking, offline)
-// и кнопки настроек / очистки истории. Сводка и кнопки могут скрываться (desktop, адаптивная разметка).
+/** Верхняя панель чата: заголовок + краткая сводка (модель, температура, thinking, offline)
+ * и кнопки настроек / очистки истории. Сводка и кнопки могут скрываться (desktop, адаптивная разметка).
+ * @param state текущее состояние чата
+ * @param onAction обработчик действий UI
+ * @param showTopBarInfo показывать подзаголовок с моделью и статусом
+ * @param showSettingsButton показывать кнопку открытия настроек
+ * @param showClearButton показывать кнопку очистки истории
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatTopBar(

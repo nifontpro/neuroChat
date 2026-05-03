@@ -37,8 +37,10 @@ private const val THINKING_TEMPERATURE = 1.0
 private const val SSE_DATA_PREFIX = "data: "
 private const val SSE_DONE_MARKER = "[DONE]"
 
-// OpenAI-совместимый клиент. Работает с любыми провайдерами, поддерживающими REST /chat/completions
-// с SSE-стримингом (OpenAI, LiteLLM, OpenRouter, локальный llama.cpp и т.д.).
+/** OpenAI-совместимый клиент. Работает с любыми провайдерами, поддерживающими REST /chat/completions
+ * с SSE-стримингом (OpenAI, LiteLLM, OpenRouter, локальный llama.cpp и т.д.).
+ * @param baseSettings настройки API (baseUrl, apiKey, timeoutSeconds), считываются из BuildKonfig
+ */
 internal class OpenAiClient(private val baseSettings: ApiSettings) {
 
     private val log = Logger.withTag("OpenAiClient")
@@ -109,6 +111,13 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
         }
         val temperature = if (thinking != null) THINKING_TEMPERATURE else settings.temperature
 
+        // Anthropic: max_tokens должен быть строго больше budget_tokens.
+        val requestedMaxTokens = settings.maxTokens
+        val maxTokens = if (thinking != null && requestedMaxTokens != null)
+            maxOf(requestedMaxTokens, thinking.budgetTokens + 1)
+        else
+            requestedMaxTokens
+
         return json.encodeToString(
             ChatRequest.serializer(),
             ChatRequest(
@@ -118,6 +127,7 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
                 stream = true,
                 thinking = thinking,
                 streamOptions = StreamOptions(),
+                maxTokens = maxTokens,
             )
         )
     }

@@ -32,8 +32,10 @@ import ru.nb.neurochat.composeapp.generated.resources.desktop_settings_icon
 import ru.nb.neurochat.composeapp.generated.resources.desktop_title_format
 import ru.nb.neurochat.designsystem.theme.NeuroChatTheme
 
-// Корень Desktop UI. На macOS поверх содержимого добавляется свой «сливающийся» TitleBar
-// (см. настройки apple.awt.* в main.kt). На Windows/Linux используется системный заголовок.
+/** Корень Desktop UI. На macOS поверх содержимого добавляется свой «сливающийся» TitleBar
+ * (см. настройки apple.awt.* в main.kt). На Windows/Linux используется системный заголовок.
+ * @param isMac true, если приложение запущено на macOS
+ */
 @Composable
 fun DesktopApp(isMac: Boolean) {
     NeuroChatTheme {

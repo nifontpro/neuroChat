@@ -15,8 +15,12 @@ import ru.nb.neurochat.chat.presentation.generated.resources.Res
 import ru.nb.neurochat.chat.presentation.generated.resources.hint_system_prompt
 import ru.nb.neurochat.chat.presentation.generated.resources.label_system_prompt
 
-// Полностью stateless: значение поля приходит из ChatState, каждое изменение летит в VM.
-// Без локального remember — иначе внешний reset/другой источник правды рассинхронизируется с UI.
+/** Поле ввода системного промпта. Полностью stateless: значение приходит из ChatState,
+ * каждое изменение передаётся в VM через [onChange]. Без локального remember — иначе внешний
+ * reset или другой источник правды рассинхронизируется с UI.
+ * @param value текущее значение (null = промпт не задан)
+ * @param onChange callback при изменении текста; передаёт null при пустой строке
+ */
 @Composable
 internal fun SystemPromptField(
     value: String?,

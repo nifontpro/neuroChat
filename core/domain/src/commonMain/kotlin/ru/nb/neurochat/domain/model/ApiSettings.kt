@@ -8,4 +8,5 @@ data class ApiSettings(
     val temperature: Double? = null,
     val timeoutSeconds: Long = 300,
     val thinkingBudget: Int? = null,
+    val maxTokens: Int? = null,
 )

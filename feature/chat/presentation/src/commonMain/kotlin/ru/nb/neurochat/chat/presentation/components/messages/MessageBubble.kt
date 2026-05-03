@@ -15,7 +15,11 @@ import androidx.compose.ui.unit.dp
 
 private const val STREAMING_CURSOR = "▋"
 
-// Пузырёк сообщения: справа для user, слева для assistant. showCursor = streaming.
+/** Пузырёк сообщения: справа для user, слева для assistant.
+ * @param text содержимое сообщения
+ * @param isUser true — пузырёк пользователя (правый), false — ассистента (левый)
+ * @param showCursor true — добавить мигающий курсор в конец текста (во время стриминга)
+ */
 @Composable
 internal fun MessageBubble(
     text: String,

@@ -14,6 +14,7 @@ sealed interface ChatAction {
     data class OnThinkingToggle(val enabled: Boolean) : ChatAction
     data class OnSystemPromptChange(val prompt: String?) : ChatAction
     data class OnMaxContextChange(val count: Int) : ChatAction
+    data class OnMaxTokensChange(val count: Int?) : ChatAction
     data class OnToggleStatistics(val enabled: Boolean) : ChatAction
     data object OnResetSettings : ChatAction
 }

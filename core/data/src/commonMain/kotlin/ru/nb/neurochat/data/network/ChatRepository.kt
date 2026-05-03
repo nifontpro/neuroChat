@@ -12,8 +12,9 @@ import ru.nb.neurochat.domain.repository.IChatRepository
 import ru.nb.neurochat.domain.util.DataError
 import ru.nb.neurochat.domain.util.Result
 
-// Реализация доменного репозитория: мапит доменные ChatMessage в DTO и оборачивает поток
-// в Result, перехватывая исключения клиента и приводя их к DataError.
+/** Реализация доменного репозитория: мапит доменные ChatMessage в DTO и оборачивает поток
+ * в Result, перехватывая исключения клиента и приводя их к DataError.
+ */
 internal class ChatRepository(private val client: OpenAiClient) : IChatRepository {
 
     private val log = Logger.withTag("ChatRepository")

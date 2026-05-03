@@ -22,9 +22,11 @@ import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_tokens
 import ru.nb.neurochat.chat.presentation.generated.resources.label_stats_total_tokens
 import ru.nb.neurochat.domain.model.ChatRole
 
-// Блок статистики последнего ответа модели + суммарные токены за сессию.
-// Локальная статистика (time/tokens/speed/chars) берётся из последнего Assistant-сообщения,
-// данные по usage (prompt/completion/total) — из state.lastUsage (поле usage в SSE от OpenAI).
+/** Блок статистики последнего ответа модели + суммарные токены за сессию.
+ * Локальная статистика (time/tokens/speed/chars) берётся из последнего Assistant-сообщения,
+ * данные по usage (prompt/completion/total) — из state.lastUsage (поле usage в SSE от OpenAI).
+ * @param state текущее состояние чата
+ */
 @Composable
 fun StatisticsSection(
     state: ChatState,

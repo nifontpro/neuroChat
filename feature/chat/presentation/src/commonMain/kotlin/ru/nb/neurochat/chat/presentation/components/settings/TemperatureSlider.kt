@@ -20,7 +20,10 @@ import kotlin.math.round
 
 private const val DEFAULT_TEMPERATURE = 0.7
 
-// Слайдер температуры 0.0–2.0 с шагом 0.1 (19 steps). null = дефолт провайдера.
+/** Слайдер температуры 0.0–2.0 с шагом 0.1 (19 шагов).
+ * @param value текущее значение (null = дефолт провайдера)
+ * @param onChange callback при изменении значения
+ */
 @Composable
 internal fun TemperatureSlider(
     value: Double?,

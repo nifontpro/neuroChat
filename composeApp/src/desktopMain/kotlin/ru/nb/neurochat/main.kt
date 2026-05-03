@@ -13,9 +13,10 @@ import ru.nb.neurochat.data.db.DatabaseFactory
 import ru.nb.neurochat.data.preferences.createDataStore
 import ru.nb.neurochat.di.initKoin
 
-// Точка входа Desktop-приложения.
-// Ответственности: инициализация Koin с platform-specific зависимостями, восстановление размера
-// и положения окна, оформление заголовка окна для macOS (сливаемый с контентом).
+/** Точка входа Desktop-приложения.
+ * Ответственности: инициализация Koin с platform-specific зависимостями, восстановление размера
+ * и положения окна, оформление заголовка окна для macOS (сливаемый с контентом).
+ */
 fun main() {
     // Platform-specific зависимости — доступны только в desktopMain, собираются здесь, а в
     // общих модулях получаются через Koin (см. dataModule, chatModule).

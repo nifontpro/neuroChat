@@ -16,6 +16,8 @@
     <string name="label_temperature_default">default</string>
     <string name="label_context_window">Context: %1$s</string>
     <string name="label_context_all">all messages</string>
+    <string name="label_max_tokens">Max tokens: %1$s</string>
+    <string name="label_max_tokens_unlimited">unlimited</string>
     <string name="label_thinking_mode">Thinking mode</string>
     <string name="label_system_prompt">System prompt</string>
     <string name="hint_system_prompt">You are a smart assistant…</string>
@@ -42,8 +44,11 @@
     <string name="cmd_think_on">Thinking mode enabled (budget: %1$s tokens)</string>
     <string name="cmd_think_off">Thinking mode disabled</string>
     <string name="cmd_think_hint">Usage: /think on | /think off</string>
-    <string name="cmd_help">Commands:\n/system &lt;text&gt; — set system prompt (no arg — reset)\n/t &lt;0.0-2.0&gt; — temperature\n/think on|off — extended thinking mode\n/? — help</string>
+    <string name="cmd_help">Commands:\n/system &lt;text&gt; — set system prompt (no arg — reset)\n/t &lt;0.0-2.0&gt; — temperature\n/think on|off — extended thinking mode\n/compact — summarize and compress history\n/? — help</string>
     <string name="cmd_unknown">Unknown command. Type /? for help.</string>
+    <string name="cmd_compact_start">Compacting history…</string>
+    <string name="cmd_compact_done">History compacted. Summary saved.</string>
+    <string name="cmd_compact_failed">Failed to compact history.</string>
     <string name="cmd_model_set">Model: %1$s</string>
     <string name="error_unknown">Unknown error</string>
     <string name="error_bad_request">Invalid request</string>

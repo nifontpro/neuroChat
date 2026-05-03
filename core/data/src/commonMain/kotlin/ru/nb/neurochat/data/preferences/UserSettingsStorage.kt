@@ -9,9 +9,11 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import co.touchlab.kermit.Logger
 import kotlinx.coroutines.flow.first
 
-// Хранилище пользовательских настроек поверх DataStore Preferences (AndroidX).
-// DataStore создаётся platform-specific (createDataStore.android/desktop/ios.kt) и регистрируется в DI.
-// SavedSettings — снимок, который загружается при старте VM (см. loadSavedSettings).
+/** Хранилище пользовательских настроек поверх DataStore Preferences (AndroidX).
+ * DataStore создаётся platform-specific (createDataStore.android/desktop/ios.kt) и регистрируется в DI.
+ * [SavedSettings] — снимок, который загружается при старте VM (см. loadSavedSettings).
+ * @param dataStore экземпляр DataStore, предоставляется через DI
+ */
 class UserSettingsStorage(
     private val dataStore: DataStore<Preferences>,
 ) {
@@ -22,6 +24,8 @@ class UserSettingsStorage(
     private val keySystemPrompt = stringPreferencesKey("system_prompt")
     private val keyMaxContext = intPreferencesKey("max_context_messages")
     private val keyShowStatistics = intPreferencesKey("show_statistics")
+    private val keyMaxTokens = intPreferencesKey("max_tokens")
+    private val keyConversationSummary = stringPreferencesKey("conversation_summary")
 
     suspend fun saveModel(model: String) {
         dataStore.edit { it[keyModel] = model }
@@ -53,6 +57,20 @@ class UserSettingsStorage(
         dataStore.edit { it[keyShowStatistics] = if (enabled) 1 else 0 }
     }
 
+    suspend fun saveMaxTokens(maxTokens: Int?) {
+        dataStore.edit {
+            if (maxTokens != null) it[keyMaxTokens] = maxTokens
+            else it.remove(keyMaxTokens)
+        }
+    }
+
+    suspend fun saveConversationSummary(summary: String?) {
+        dataStore.edit {
+            if (summary != null) it[keyConversationSummary] = summary
+            else it.remove(keyConversationSummary)
+        }
+    }
+
     suspend fun load(): SavedSettings? {
         val prefs = dataStore.data.first()
         val hasAny = prefs.asMap().isNotEmpty()
@@ -65,6 +83,8 @@ class UserSettingsStorage(
             systemPrompt = prefs[keySystemPrompt],
             maxContextMessages = prefs[keyMaxContext],
             showStatistics = prefs[keyShowStatistics]?.let { it == 1 },
+            maxTokens = prefs[keyMaxTokens],
+            conversationSummary = prefs[keyConversationSummary],
         )
     }
 
@@ -81,4 +101,6 @@ data class SavedSettings(
     val systemPrompt: String?,
     val maxContextMessages: Int?,
     val showStatistics: Boolean?,
+    val maxTokens: Int?,
+    val conversationSummary: String?,
 )

@@ -37,7 +37,9 @@ import ru.nb.neurochat.presentation.util.isDesktop
 
 private val SETTINGS_PANEL_MAX_WIDTH = 320.dp
 
-// Точка входа фичи «Чат». Подписывается на state/events ViewModel и передаёт в stateless ChatScreen.
+/** Точка входа фичи «Чат». Подписывается на state/events ViewModel и передаёт в stateless ChatScreen.
+ * @param viewModel экземпляр ViewModel, по умолчанию берётся из Koin
+ */
 @Composable
 fun ChatScreenRoot(
     viewModel: ChatViewModel = koinViewModel(),
@@ -64,7 +66,11 @@ fun ChatScreenRoot(
     )
 }
 
-// Адаптивная разметка: широкий экран -> Row(SettingsPanel | Chat), узкий -> Chat + ModalBottomSheet.
+/** Адаптивная разметка: широкий экран → Row(SettingsPanel | Chat), узкий → Chat + ModalBottomSheet.
+ * @param state текущее состояние чата
+ * @param onAction обработчик действий UI
+ * @param snackbarHostState состояние Snackbar для отображения ошибок
+ */
 @Composable
 fun ChatScreen(
     state: ChatState,
@@ -144,8 +150,16 @@ private fun NarrowLayout(
     }
 }
 
-// Собственно чат: TopBar + список сообщений + строка ввода. Используется как single-pane (mobile)
-// или правая часть Row (wide screen). internal — чтобы был доступен в Preview (androidMain).
+/** Собственно чат: TopBar + список сообщений + строка ввода. Используется как single-pane (mobile)
+ * или правая часть Row (wide screen). internal — чтобы был доступен в Preview (androidMain).
+ * @param state текущее состояние чата
+ * @param onAction обработчик действий UI
+ * @param showSettingsButton показывать кнопку настроек в TopBar
+ * @param showTopBarInfo показывать подзаголовок с моделью и статусом в TopBar
+ * @param showClearButton показывать кнопку очистки истории в TopBar
+ * @param showTopBar показывать TopBar целиком
+ * @param snackbarHostState состояние Snackbar для отображения ошибок
+ */
 @Composable
 internal fun ChatContent(
     state: ChatState,

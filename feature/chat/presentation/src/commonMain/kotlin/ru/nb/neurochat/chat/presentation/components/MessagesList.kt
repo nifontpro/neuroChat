@@ -29,7 +29,7 @@ import ru.nb.neurochat.domain.model.ChatMessage
 import ru.nb.neurochat.domain.model.ChatRole
 import ru.nb.neurochat.domain.util.DataError
 
-// Список сообщений чата: пузырьки user/assistant, системные строки, индикатор загрузки и ошибка.
+/** Список сообщений чата: пузырьки user/assistant, системные строки, индикатор загрузки и ошибка. */
 @Composable
 fun MessagesList(
     state: ChatState,

@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOf
 
+/** Permission ACCESS_NETWORK_STATE декларирован в core/data/src/androidMain/AndroidManifest.xml
+ *  и через manifest merger попадает в финальный манифест приложения. */
 actual class ConnectivityObserver(
     context: Context,
 ) {
@@ -23,7 +25,10 @@ actual class ConnectivityObserver(
             flowOf(false)
         }
 
+    /** callbackFlow привязывает время жизни NetworkCallback к подписчику:
+     *  awaitClose гарантирует unregister при отмене корутины. */
     private fun ConnectivityManager.observe(): Flow<Boolean> = callbackFlow {
+        // NetworkCallback не стреляет по уже подключённой сети — опрашиваем состояние вручную при старте.
         val initiallyConnected = activeNetwork?.let { network ->
             getNetworkCapabilities(network)?.hasCapability(
                 NetworkCapabilities.NET_CAPABILITY_VALIDATED
@@ -48,6 +53,8 @@ actual class ConnectivityObserver(
                 trySend(false)
             }
 
+            /** NET_CAPABILITY_VALIDATED может сняться после onAvailable (captive portal);
+             *  NET_CAPABILITY_INTERNET недостаточен — он не гарантирует реальный доступ. */
             override fun onCapabilitiesChanged(
                 network: Network,
                 networkCapabilities: NetworkCapabilities,

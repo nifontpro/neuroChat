@@ -16,6 +16,8 @@
     <string name="label_temperature_default">по умолчанию</string>
     <string name="label_context_window">Контекст: %1$s</string>
     <string name="label_context_all">все сообщения</string>
+    <string name="label_max_tokens">Макс. токенов: %1$s</string>
+    <string name="label_max_tokens_unlimited">без ограничений</string>
     <string name="label_thinking_mode">Режим мышления</string>
     <string name="label_system_prompt">Системный промпт</string>
     <string name="hint_system_prompt">Ты умный ассистент…</string>
@@ -42,8 +44,11 @@
     <string name="cmd_think_on">Режим thinking включён (budget: %1$s токенов)</string>
     <string name="cmd_think_off">Режим thinking выключён</string>
     <string name="cmd_think_hint">Используй: /think on | /think off</string>
-    <string name="cmd_help">Команды:\n/system &lt;текст&gt; — задать системный промпт (без аргумента — сброс)\n/t &lt;0.0-2.0&gt; — температура\n/think on|off — режим расширенного мышления\n/? — справка</string>
+    <string name="cmd_help">Команды:\n/system &lt;текст&gt; — задать системный промпт (без аргумента — сброс)\n/t &lt;0.0-2.0&gt; — температура\n/think on|off — режим расширенного мышления\n/compact — сжать историю в сводку\n/? — справка</string>
     <string name="cmd_unknown">Неизвестная команда. Напиши /? для справки.</string>
+    <string name="cmd_compact_start">Сжимаю историю…</string>
+    <string name="cmd_compact_done">История сжата. Сводка сохранена.</string>
+    <string name="cmd_compact_failed">Не удалось сжать историю.</string>
     <string name="cmd_model_set">Модель: %1$s</string>
     <string name="error_unknown">Неизвестная ошибка</string>
     <string name="error_bad_request">Некорректный запрос</string>

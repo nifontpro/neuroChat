@@ -14,8 +14,11 @@ import ru.nb.neurochat.chat.presentation.generated.resources.Res
 import ru.nb.neurochat.chat.presentation.generated.resources.label_context_all
 import ru.nb.neurochat.chat.presentation.generated.resources.label_context_window
 
-// Ограничение контекста: сколько последних сообщений отправлять в запрос.
-// 0 = все (без отсечения). Системный промпт добавляется независимо во VM.
+/** Слайдер ограничения контекста: сколько последних сообщений отправлять в запрос.
+ * 0 = все (без отсечения). Системный промпт добавляется независимо во VM.
+ * @param value текущее значение (0 = без лимита, диапазон 0..50)
+ * @param onChange callback при изменении значения
+ */
 @Composable
 internal fun ContextWindowSlider(
     value: Int,

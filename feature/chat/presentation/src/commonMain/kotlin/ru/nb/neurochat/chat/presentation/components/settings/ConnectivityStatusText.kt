@@ -8,7 +8,9 @@ import ru.nb.neurochat.chat.presentation.generated.resources.Res
 import ru.nb.neurochat.chat.presentation.generated.resources.status_offline
 import ru.nb.neurochat.chat.presentation.generated.resources.status_online
 
-// Индикатор подключения. Цвет: primary — онлайн, error — оффлайн.
+/** Индикатор подключения. Цвет: primary — онлайн, error — оффлайн.
+ * @param isConnected true — есть сеть, false — офлайн
+ */
 @Composable
 internal fun ConnectivityStatusText(isConnected: Boolean) {
     Text(

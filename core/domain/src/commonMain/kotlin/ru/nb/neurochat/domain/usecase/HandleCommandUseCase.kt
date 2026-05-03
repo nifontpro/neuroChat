@@ -18,6 +18,7 @@ class HandleCommandUseCase(
             "/system" -> handleSystem(arg, settings)
             "/t" -> handleTemperature(arg, settings)
             "/think" -> handleThinking(arg, settings)
+            "/compact" -> CommandResult.CompactRequested
             "/?" -> CommandResult.Help
             else -> CommandResult.UnknownCommand
         }
@@ -76,4 +77,5 @@ sealed interface CommandResult {
     data object ThinkingHint : CommandResult
     data object Help : CommandResult
     data object UnknownCommand : CommandResult
+    data object CompactRequested : CommandResult
 }

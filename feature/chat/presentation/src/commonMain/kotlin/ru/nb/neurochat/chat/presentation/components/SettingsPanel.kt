@@ -22,6 +22,7 @@ import ru.nb.neurochat.chat.presentation.ChatAction
 import ru.nb.neurochat.chat.presentation.ChatState
 import ru.nb.neurochat.chat.presentation.components.settings.ConnectivityStatusText
 import ru.nb.neurochat.chat.presentation.components.settings.ContextWindowSlider
+import ru.nb.neurochat.chat.presentation.components.settings.MaxTokensSlider
 import ru.nb.neurochat.chat.presentation.components.settings.ModelSelector
 import ru.nb.neurochat.chat.presentation.components.settings.SwitchRow
 import ru.nb.neurochat.chat.presentation.components.settings.SystemPromptField
@@ -32,9 +33,12 @@ import ru.nb.neurochat.chat.presentation.generated.resources.label_show_statisti
 import ru.nb.neurochat.chat.presentation.generated.resources.label_thinking_mode
 import ru.nb.neurochat.chat.presentation.generated.resources.settings
 
-// Панель настроек чата. Рендерится двумя способами (см. ChatScreen):
-//   - широкий экран — колонка слева
-//   - узкий экран — ModalBottomSheet
+/** Панель настроек чата. Рендерится двумя способами (см. ChatScreen):
+ *  - широкий экран — колонка слева
+ *  - узкий экран — ModalBottomSheet
+ * @param state текущее состояние чата
+ * @param onAction обработчик действий UI
+ */
 @Composable
 fun SettingsPanel(
     state: ChatState,
@@ -82,6 +86,12 @@ fun SettingsPanel(
             ContextWindowSlider(
                 value = state.maxContextMessages,
                 onChange = { onAction(ChatAction.OnMaxContextChange(it)) },
+            )
+            Divider()
+
+            MaxTokensSlider(
+                value = state.maxTokens,
+                onChange = { onAction(ChatAction.OnMaxTokensChange(it)) },
             )
             Divider()
 
