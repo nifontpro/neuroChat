@@ -83,6 +83,18 @@ internal data class CompletionMessage(
     val content: String? = null,
 )
 
+/** Ответ GET /models — OpenAI-совместимый формат списка моделей. */
+@Serializable
+internal data class ModelsListResponse(
+    val data: List<ModelEntry> = emptyList(),
+)
+
+@Serializable
+internal data class ModelEntry(
+    val id: String,
+    @SerialName("owned_by") val ownedBy: String? = null,
+)
+
 /** Формат ошибки, которую может прислать провайдер вместо/внутри SSE-стрима. */
 @Serializable
 internal data class StreamErrorChunk(

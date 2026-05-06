@@ -1,5 +1,6 @@
 package ru.nb.neurochat.data.db
 
+import ru.nb.neurochat.domain.model.Branch
 import ru.nb.neurochat.domain.model.ChatMessage
 import ru.nb.neurochat.domain.model.ChatRole
 import ru.nb.neurochat.domain.model.ResponseStatistics
@@ -16,10 +17,18 @@ internal fun ChatMessageEntity.toChatMessage(): ChatMessage = ChatMessage(
     } else null,
 )
 
-internal fun ChatMessage.toEntity(): ChatMessageEntity = ChatMessageEntity(
+internal fun ChatMessage.toEntity(branchId: Long): ChatMessageEntity = ChatMessageEntity(
+    branchId = branchId,
     role = role.value,
     content = content,
     durationMs = statistics?.durationMs,
     tokenCount = statistics?.tokenCount,
     charCount = statistics?.charCount,
+)
+
+internal fun BranchEntity.toBranch(): Branch = Branch(
+    id = id,
+    name = name,
+    parentBranchId = parentBranchId,
+    createdAt = createdAt,
 )

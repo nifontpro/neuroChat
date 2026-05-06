@@ -20,10 +20,13 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import ru.nb.neurochat.chat.presentation.ChatAction
 import ru.nb.neurochat.chat.presentation.ChatState
+import ru.nb.neurochat.chat.presentation.components.settings.BranchesSection
 import ru.nb.neurochat.chat.presentation.components.settings.ConnectivityStatusText
 import ru.nb.neurochat.chat.presentation.components.settings.ContextWindowSlider
+import ru.nb.neurochat.chat.presentation.components.settings.FactsSection
 import ru.nb.neurochat.chat.presentation.components.settings.MaxTokensSlider
 import ru.nb.neurochat.chat.presentation.components.settings.ModelSelector
+import ru.nb.neurochat.chat.presentation.components.settings.StrategySelector
 import ru.nb.neurochat.chat.presentation.components.settings.SwitchRow
 import ru.nb.neurochat.chat.presentation.components.settings.SystemPromptField
 import ru.nb.neurochat.chat.presentation.components.settings.TemperatureSlider
@@ -32,6 +35,7 @@ import ru.nb.neurochat.chat.presentation.generated.resources.label_reset_setting
 import ru.nb.neurochat.chat.presentation.generated.resources.label_show_statistics
 import ru.nb.neurochat.chat.presentation.generated.resources.label_thinking_mode
 import ru.nb.neurochat.chat.presentation.generated.resources.settings
+import ru.nb.neurochat.domain.model.ContextStrategy
 
 /** Панель настроек чата. Рендерится двумя способами (см. ChatScreen):
  *  - широкий экран — колонка слева
@@ -73,6 +77,8 @@ fun SettingsPanel(
 
             ModelSelector(
                 currentModel = state.currentModel,
+                models = state.availableModels,
+                isLoading = state.isLoadingModels,
                 onSelect = { onAction(ChatAction.OnSelectModel(it)) },
             )
             Divider()
@@ -83,11 +89,41 @@ fun SettingsPanel(
             )
             Divider()
 
-            ContextWindowSlider(
-                value = state.maxContextMessages,
-                onChange = { onAction(ChatAction.OnMaxContextChange(it)) },
+            StrategySelector(
+                selected = state.contextStrategy,
+                onSelect = { onAction(ChatAction.OnContextStrategyChange(it)) },
             )
             Divider()
+
+            // Контекстное окно используется в стратегиях SLIDING_WINDOW и STICKY_FACTS
+            // (для BRANCHING история ветки берётся целиком).
+            if (state.contextStrategy != ContextStrategy.BRANCHING) {
+                ContextWindowSlider(
+                    value = state.maxContextMessages,
+                    onChange = { onAction(ChatAction.OnMaxContextChange(it)) },
+                )
+                Divider()
+            }
+
+            if (state.contextStrategy == ContextStrategy.STICKY_FACTS) {
+                FactsSection(
+                    facts = state.facts,
+                    isUpdating = state.isUpdatingFacts,
+                    onClear = { onAction(ChatAction.OnClearFacts) },
+                )
+                Divider()
+            }
+
+            if (state.contextStrategy == ContextStrategy.BRANCHING) {
+                BranchesSection(
+                    branches = state.branches,
+                    currentBranchId = state.currentBranchId,
+                    onCreate = { onAction(ChatAction.OnCreateBranch(it)) },
+                    onSwitch = { onAction(ChatAction.OnSwitchBranch(it)) },
+                    onDelete = { onAction(ChatAction.OnDeleteBranch(it)) },
+                )
+                Divider()
+            }
 
             MaxTokensSlider(
                 value = state.maxTokens,

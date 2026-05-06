@@ -1,6 +1,7 @@
 package ru.nb.neurochat.domain.usecase
 
 import ru.nb.neurochat.domain.model.ApiSettings
+import ru.nb.neurochat.domain.model.ContextStrategy
 
 /**
  * Парсит и применяет slash-команду к [settings]. Возвращает обновлённые настройки и тип результата
@@ -19,6 +20,10 @@ class HandleCommandUseCase(
             "/t" -> handleTemperature(arg, settings)
             "/think" -> handleThinking(arg, settings)
             "/compact" -> CommandResult.CompactRequested
+            "/strategy" -> handleStrategy(arg)
+            "/branch" -> handleBranch(arg)
+            "/branches" -> CommandResult.BranchesListRequested
+            "/switch" -> handleSwitch(arg)
             "/?" -> CommandResult.Help
             else -> CommandResult.UnknownCommand
         }
@@ -58,6 +63,24 @@ class HandleCommandUseCase(
         else -> CommandResult.ThinkingHint
     }
 
+    private fun handleStrategy(arg: String): CommandResult {
+        val key = arg.lowercase()
+        // принимаем как полный ключ ("sliding_window"), так и короткие алиасы
+        val strategy = when (key) {
+            "window", "sliding", ContextStrategy.SLIDING_WINDOW.key -> ContextStrategy.SLIDING_WINDOW
+            "facts", "sticky", ContextStrategy.STICKY_FACTS.key -> ContextStrategy.STICKY_FACTS
+            "branch", "tree", ContextStrategy.BRANCHING.key -> ContextStrategy.BRANCHING
+            else -> return CommandResult.StrategyHint
+        }
+        return CommandResult.StrategyChanged(strategy)
+    }
+
+    private fun handleBranch(arg: String): CommandResult =
+        if (arg.isBlank()) CommandResult.BranchHint else CommandResult.BranchCreateRequested(arg)
+
+    private fun handleSwitch(arg: String): CommandResult =
+        if (arg.isBlank()) CommandResult.SwitchHint else CommandResult.BranchSwitchRequested(arg)
+
     private companion object {
         const val MIN_TEMPERATURE = 0.0
         const val MAX_TEMPERATURE = 2.0
@@ -73,8 +96,16 @@ sealed interface CommandResult {
         val budget: Int?,
     ) : CommandResult
 
+    data class StrategyChanged(val strategy: ContextStrategy) : CommandResult
+    data class BranchCreateRequested(val name: String) : CommandResult
+    data class BranchSwitchRequested(val target: String) : CommandResult
+    data object BranchesListRequested : CommandResult
+
     data object TemperatureHint : CommandResult
     data object ThinkingHint : CommandResult
+    data object StrategyHint : CommandResult
+    data object BranchHint : CommandResult
+    data object SwitchHint : CommandResult
     data object Help : CommandResult
     data object UnknownCommand : CommandResult
     data object CompactRequested : CommandResult

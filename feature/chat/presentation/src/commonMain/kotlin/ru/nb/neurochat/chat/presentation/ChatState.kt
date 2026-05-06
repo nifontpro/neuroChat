@@ -1,6 +1,10 @@
 package ru.nb.neurochat.chat.presentation
 
+import ru.nb.neurochat.domain.datasource.IChatHistoryDataSource.Companion.MAIN_BRANCH_ID
+import ru.nb.neurochat.domain.model.Branch
 import ru.nb.neurochat.domain.model.ChatMessage
+import ru.nb.neurochat.domain.model.ContextStrategy
+import ru.nb.neurochat.domain.model.Fact
 import ru.nb.neurochat.domain.model.TokenUsage
 import ru.nb.neurochat.domain.util.DataError
 
@@ -21,4 +25,14 @@ data class ChatState(
     val showStatistics: Boolean = false,
     val lastUsage: TokenUsage? = null,
     val sessionTotalTokens: Int = 0,
+
+    val contextStrategy: ContextStrategy = ContextStrategy.SLIDING_WINDOW,
+    val facts: List<Fact> = emptyList(),
+    val isUpdatingFacts: Boolean = false,
+
+    val branches: List<Branch> = emptyList(),
+    val currentBranchId: Long = MAIN_BRANCH_ID,
+
+    val availableModels: List<String> = emptyList(),
+    val isLoadingModels: Boolean = false,
 )

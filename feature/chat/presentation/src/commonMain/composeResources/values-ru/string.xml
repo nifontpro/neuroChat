@@ -24,6 +24,29 @@
     <string name="label_show_statistics">Показывать статистику</string>
     <string name="label_reset_settings">Сбросить настройки</string>
 
+    <!-- Context strategy -->
+    <string name="label_context_strategy">Стратегия контекста</string>
+    <string name="strategy_sliding_window">Скользящее окно</string>
+    <string name="strategy_sticky_facts">Sticky-факты</string>
+    <string name="strategy_branching">Ветвление</string>
+    <string name="strategy_sliding_window_hint">Последние N сообщений + сводка из /compact</string>
+    <string name="strategy_sticky_facts_hint">Блок ключевых фактов + последние N сообщений</string>
+    <string name="strategy_branching_hint">Независимые ветки диалога</string>
+
+    <!-- Facts panel -->
+    <string name="label_facts_section">Факты (авто-извлечение)</string>
+    <string name="label_facts_empty">Фактов нет — появятся после обмена сообщениями</string>
+    <string name="label_facts_updating">Обновляю факты…</string>
+    <string name="label_facts_clear">Очистить факты</string>
+
+    <!-- Branches panel -->
+    <string name="label_branches_section">Ветки диалога</string>
+    <string name="label_branches_current">Текущая: %1$s</string>
+    <string name="label_branch_new_placeholder">Имя новой ветки…</string>
+    <string name="label_branch_create">Создать ветку</string>
+    <string name="label_branch_switch">Переключиться</string>
+    <string name="label_branch_delete">Удалить</string>
+
     <!-- Statistics block -->
     <string name="label_stats_section">Статистика последнего ответа</string>
     <string name="label_stats_empty">Статистика появится после первого ответа модели</string>
@@ -44,7 +67,15 @@
     <string name="cmd_think_on">Режим thinking включён (budget: %1$s токенов)</string>
     <string name="cmd_think_off">Режим thinking выключён</string>
     <string name="cmd_think_hint">Используй: /think on | /think off</string>
-    <string name="cmd_help">Команды:\n/system &lt;текст&gt; — задать системный промпт (без аргумента — сброс)\n/t &lt;0.0-2.0&gt; — температура\n/think on|off — режим расширенного мышления\n/compact — сжать историю в сводку\n/? — справка</string>
+    <string name="cmd_help">Команды:\n/system &lt;текст&gt; — задать системный промпт (без аргумента — сброс)\n/t &lt;0.0-2.0&gt; — температура\n/think on|off — режим расширенного мышления\n/compact — сжать историю в сводку\n/strategy &lt;window|facts|branching&gt; — стратегия контекста\n/branch &lt;имя&gt; — создать ветку от текущего места\n/branches — список веток\n/switch &lt;id|имя&gt; — переключиться на ветку\n/? — справка</string>
+    <string name="cmd_strategy_set">Стратегия контекста: %1$s</string>
+    <string name="cmd_strategy_hint">Используй: /strategy &lt;window|facts|branching&gt;</string>
+    <string name="cmd_branch_hint">Используй: /branch &lt;имя-новой-ветки&gt;</string>
+    <string name="cmd_branch_created">Создана и активирована ветка: %1$s</string>
+    <string name="cmd_branch_switched">Переключился на ветку: %1$s</string>
+    <string name="cmd_switch_hint">Используй: /switch &lt;id|имя&gt;</string>
+    <string name="cmd_switch_unknown">Ветка не найдена: %1$s</string>
+    <string name="cmd_branches_list">Ветки:\n%1$s</string>
     <string name="cmd_unknown">Неизвестная команда. Напиши /? для справки.</string>
     <string name="cmd_compact_start">Сжимаю историю…</string>
     <string name="cmd_compact_done">История сжата. Сводка сохранена.</string>
@@ -60,6 +91,7 @@
     <string name="error_no_internet">Нет подключения к сети</string>
     <string name="error_server">Ошибка сервера</string>
     <string name="error_service_unavailable">Сервис недоступен</string>
+    <string name="error_upstream_down">Сервер LLM временно недоступен (Cloudflare 52x). Попробуйте через минуту.</string>
     <string name="error_serialization">Не удалось разобрать ответ</string>
     <string name="error_not_connected">Нет соединения</string>
 </resources>

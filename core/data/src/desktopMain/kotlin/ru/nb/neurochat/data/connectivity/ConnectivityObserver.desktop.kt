@@ -18,9 +18,14 @@ actual class ConnectivityObserver {
     private val log = Logger.withTag("ConnectivityObserver")
 
     actual val isConnected: Flow<Boolean> = flow {
+        // Логируем только при смене состояния, иначе каждые 5 сек спам.
+        var prev: Boolean? = null
         while (true) {
             val connected = isConnected()
-            log.i { "Desktop connectivity: $connected" }
+            if (connected != prev) {
+                log.i { "Desktop connectivity: $connected" }
+                prev = connected
+            }
             emit(connected)
             delay(5_000L)
         }

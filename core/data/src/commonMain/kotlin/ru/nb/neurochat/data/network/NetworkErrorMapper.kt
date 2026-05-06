@@ -16,6 +16,11 @@ internal fun HttpStatusCode.toDataError(): DataError.Remote = when (value) {
     429 -> DataError.Remote.TOO_MANY_REQUESTS
     503 -> DataError.Remote.SERVICE_UNAVAILABLE
     else -> when {
+        // Cloudflare-specific: 520 Unknown error, 521 Web server is down,
+        // 522 Connection timed out, 523 Origin unreachable, 524 A timeout occurred,
+        // 525-527 — TLS/Railgun ошибки между CF и origin.
+        // Все они означают «прокси на месте, origin не доступен или не отвечает».
+        value in 520..527 -> DataError.Remote.UPSTREAM_DOWN
         value in 500..599 -> DataError.Remote.SERVER_ERROR
         else -> DataError.Remote.UNKNOWN
     }

@@ -16,4 +16,10 @@ interface IChatRepository {
         history: List<ChatMessage>,
         settings: ApiSettings,
     ): Flow<Result<StreamToken, DataError>>
+
+    /**
+     * GET /models — отсортированный список доступных у провайдера моделей.
+     * При сетевой/протокольной ошибке возвращает Result.Failure(DataError).
+     */
+    suspend fun listModels(): Result<List<String>, DataError>
 }

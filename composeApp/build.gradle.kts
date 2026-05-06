@@ -49,10 +49,23 @@ compose.desktop {
     application {
         mainClass = "ru.nb.neurochat.MainKt"
 
+        // Явный heap, чтобы macOS не убивал JVM SIGKILL (137) при дефолте.
+        jvmArgs += listOf("-Xmx1024M", "-Xms256M")
+
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "ru.nb.neurochat"
             packageVersion = "1.0.0"
         }
+    }
+}
+
+// :composeApp:desktopRun (от Kotlin JVM target) и hotRunDesktop (от compose hot reload)
+// — отдельные JavaExec-таски, не наследуют jvmArgs из compose.desktop.application.
+// Прокидываем явный heap, чтобы IDE-запуск тоже не получал SIGKILL.
+tasks.withType<JavaExec>().configureEach {
+    val n = name
+    if (n == "desktopRun" || n.startsWith("hotRunDesktop") || n.startsWith("hotDevDesktop")) {
+        jvmArgs("-Xmx1024M", "-Xms256M")
     }
 }

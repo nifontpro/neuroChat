@@ -1,5 +1,7 @@
 package ru.nb.neurochat.chat.presentation
 
+import ru.nb.neurochat.domain.model.ContextStrategy
+
 sealed interface ChatAction {
     data class OnInputChange(val text: String) : ChatAction
     data object OnSendMessage : ChatAction
@@ -17,4 +19,15 @@ sealed interface ChatAction {
     data class OnMaxTokensChange(val count: Int?) : ChatAction
     data class OnToggleStatistics(val enabled: Boolean) : ChatAction
     data object OnResetSettings : ChatAction
+
+    // Context strategy
+    data class OnContextStrategyChange(val strategy: ContextStrategy) : ChatAction
+
+    // Sticky Facts
+    data object OnClearFacts : ChatAction
+
+    // Branching
+    data class OnCreateBranch(val name: String) : ChatAction
+    data class OnSwitchBranch(val branchId: Long) : ChatAction
+    data class OnDeleteBranch(val branchId: Long) : ChatAction
 }

@@ -30,5 +30,6 @@ fun dataModule(settings: ApiSettings) = module {
             .build()
     }
     single { get<NeuroChatDatabase>().chatMessageDao() }
-    single<IChatHistoryDataSource> { RoomChatHistoryDataSource(get()) }
+    single { get<NeuroChatDatabase>().branchDao() }
+    single<IChatHistoryDataSource> { RoomChatHistoryDataSource(get(), get()) }
 }

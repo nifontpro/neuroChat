@@ -5,9 +5,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import co.touchlab.kermit.Logger
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import ru.nb.neurochat.domain.model.ContextStrategy
+import ru.nb.neurochat.domain.model.Fact
 
 /** Хранилище пользовательских настроек поверх DataStore Preferences (AndroidX).
  * DataStore создаётся platform-specific (createDataStore.android/desktop/ios.kt) и регистрируется в DI.
@@ -18,6 +23,8 @@ class UserSettingsStorage(
     private val dataStore: DataStore<Preferences>,
 ) {
     private val log = Logger.withTag("UserSettings")
+    private val json = Json { ignoreUnknownKeys = true }
+
     private val keyModel = stringPreferencesKey("model")
     private val keyTemperature = doublePreferencesKey("temperature")
     private val keyThinkingEnabled = intPreferencesKey("thinking_enabled")
@@ -26,6 +33,9 @@ class UserSettingsStorage(
     private val keyShowStatistics = intPreferencesKey("show_statistics")
     private val keyMaxTokens = intPreferencesKey("max_tokens")
     private val keyConversationSummary = stringPreferencesKey("conversation_summary")
+    private val keyContextStrategy = stringPreferencesKey("context_strategy")
+    private val keyFactsJson = stringPreferencesKey("facts_json")
+    private val keyCurrentBranchId = longPreferencesKey("current_branch_id")
 
     suspend fun saveModel(model: String) {
         dataStore.edit { it[keyModel] = model }
@@ -71,10 +81,28 @@ class UserSettingsStorage(
         }
     }
 
+    suspend fun saveContextStrategy(strategy: ContextStrategy) {
+        dataStore.edit { it[keyContextStrategy] = strategy.key }
+    }
+
+    suspend fun saveFacts(facts: List<Fact>) {
+        dataStore.edit {
+            if (facts.isEmpty()) it.remove(keyFactsJson)
+            else it[keyFactsJson] = json.encodeToString(facts.map { f -> FactDto(f.key, f.value) })
+        }
+    }
+
+    suspend fun saveCurrentBranchId(id: Long) {
+        dataStore.edit { it[keyCurrentBranchId] = id }
+    }
+
     suspend fun load(): SavedSettings? {
         val prefs = dataStore.data.first()
         val hasAny = prefs.asMap().isNotEmpty()
         if (!hasAny) return null
+
+        val factsJson = prefs[keyFactsJson]
+        val facts = factsJson?.let { decodeFactsOrNull(it) }
 
         return SavedSettings(
             model = prefs[keyModel],
@@ -85,6 +113,9 @@ class UserSettingsStorage(
             showStatistics = prefs[keyShowStatistics]?.let { it == 1 },
             maxTokens = prefs[keyMaxTokens],
             conversationSummary = prefs[keyConversationSummary],
+            contextStrategy = ContextStrategy.fromKey(prefs[keyContextStrategy]),
+            facts = facts,
+            currentBranchId = prefs[keyCurrentBranchId],
         )
     }
 
@@ -92,6 +123,16 @@ class UserSettingsStorage(
         dataStore.edit { it.clear() }
         log.i { "user settings cleared" }
     }
+
+    private fun decodeFactsOrNull(raw: String): List<Fact>? = try {
+        json.decodeFromString<List<FactDto>>(raw).map { Fact(it.key, it.value) }
+    } catch (e: Exception) {
+        log.w(e) { "facts decode failed" }
+        null
+    }
+
+    @Serializable
+    private data class FactDto(val key: String, val value: String)
 }
 
 data class SavedSettings(
@@ -103,4 +144,7 @@ data class SavedSettings(
     val showStatistics: Boolean?,
     val maxTokens: Int?,
     val conversationSummary: String?,
+    val contextStrategy: ContextStrategy,
+    val facts: List<Fact>?,
+    val currentBranchId: Long?,
 )

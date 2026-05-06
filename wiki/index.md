@@ -1,6 +1,6 @@
 # Index
 
-_Обновлён: 2026-05-04 · страниц: 16 · источников: 7_
+_Обновлён: 2026-05-06 · страниц: 18 · источников: 8_
 
 Каталог страниц вики. Поддерживается агентом — см. [SCHEMA.md](SCHEMA.md).
 
@@ -8,6 +8,7 @@ _Обновлён: 2026-05-04 · страниц: 16 · источников: 7_
 - _(пусто — будет добавлено после накопления материала)_
 
 ## Sources
+- [[sources/less-l10]] — Л10: 3 стратегии контекста — Sliding Window / Sticky Facts / Branching + переключатель (2026-05-06)
 - [[sources/less-l9]] — Л9: сжатие контекста — команда /compact, summary в BuildChatContextUseCase (2026-05-04)
 - [[sources/less-l8]] — Л8: работа с токенами — подсчёт prompt/completion/session, StatisticsSection (2026-05-03)
 - [[sources/less-l7]] — Л7: сохранение контекста — Room KMP SQLite, загрузка при старте (2026-05-03)
@@ -47,4 +48,4 @@ _Обновлён: 2026-05-04 · страниц: 16 · источников: 7_
 - [[concepts/context-compression]] — /compact: LLM суммаризирует историю, summary подставляется в контекст
 
 ## Analyses
-- _(пусто)_
+- [[analyses/compose-desktop-oom-fix]] — exit 137 (SIGKILL) при `:composeApp:desktopRun`: jvmArgs + уменьшение Gradle daemon heap, обязательно `./gradlew --stop` (2026-05-06)

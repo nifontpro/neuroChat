@@ -24,6 +24,29 @@
     <string name="label_show_statistics">Show statistics</string>
     <string name="label_reset_settings">Reset to defaults</string>
 
+    <!-- Context strategy -->
+    <string name="label_context_strategy">Context strategy</string>
+    <string name="strategy_sliding_window">Sliding Window</string>
+    <string name="strategy_sticky_facts">Sticky Facts</string>
+    <string name="strategy_branching">Branching</string>
+    <string name="strategy_sliding_window_hint">Last N messages + summary (/compact)</string>
+    <string name="strategy_sticky_facts_hint">Key facts block + last N messages</string>
+    <string name="strategy_branching_hint">Independent dialogue branches</string>
+
+    <!-- Facts panel -->
+    <string name="label_facts_section">Facts (auto-extracted)</string>
+    <string name="label_facts_empty">No facts yet — facts appear after messages exchange</string>
+    <string name="label_facts_updating">Updating facts…</string>
+    <string name="label_facts_clear">Clear facts</string>
+
+    <!-- Branches panel -->
+    <string name="label_branches_section">Branches</string>
+    <string name="label_branches_current">Current: %1$s</string>
+    <string name="label_branch_new_placeholder">New branch name…</string>
+    <string name="label_branch_create">Create branch</string>
+    <string name="label_branch_switch">Switch</string>
+    <string name="label_branch_delete">Delete</string>
+
     <!-- Statistics block -->
     <string name="label_stats_section">Last response statistics</string>
     <string name="label_stats_empty">Statistics will appear after the first model response</string>
@@ -44,7 +67,15 @@
     <string name="cmd_think_on">Thinking mode enabled (budget: %1$s tokens)</string>
     <string name="cmd_think_off">Thinking mode disabled</string>
     <string name="cmd_think_hint">Usage: /think on | /think off</string>
-    <string name="cmd_help">Commands:\n/system &lt;text&gt; — set system prompt (no arg — reset)\n/t &lt;0.0-2.0&gt; — temperature\n/think on|off — extended thinking mode\n/compact — summarize and compress history\n/? — help</string>
+    <string name="cmd_help">Commands:\n/system &lt;text&gt; — set system prompt (no arg — reset)\n/t &lt;0.0-2.0&gt; — temperature\n/think on|off — extended thinking mode\n/compact — summarize and compress history\n/strategy &lt;window|facts|branching&gt; — set context strategy\n/branch &lt;name&gt; — fork new branch from current point\n/branches — list branches\n/switch &lt;id|name&gt; — switch to branch\n/? — help</string>
+    <string name="cmd_strategy_set">Context strategy: %1$s</string>
+    <string name="cmd_strategy_hint">Usage: /strategy &lt;window|facts|branching&gt;</string>
+    <string name="cmd_branch_hint">Usage: /branch &lt;new-branch-name&gt;</string>
+    <string name="cmd_branch_created">Branch created and switched: %1$s</string>
+    <string name="cmd_branch_switched">Switched to branch: %1$s</string>
+    <string name="cmd_switch_hint">Usage: /switch &lt;id|name&gt;</string>
+    <string name="cmd_switch_unknown">Branch not found: %1$s</string>
+    <string name="cmd_branches_list">Branches:\n%1$s</string>
     <string name="cmd_unknown">Unknown command. Type /? for help.</string>
     <string name="cmd_compact_start">Compacting history…</string>
     <string name="cmd_compact_done">History compacted. Summary saved.</string>
@@ -60,6 +91,7 @@
     <string name="error_no_internet">No internet connection</string>
     <string name="error_server">Server error</string>
     <string name="error_service_unavailable">Service unavailable</string>
+    <string name="error_upstream_down">LLM server is temporarily unreachable (Cloudflare 52x). Try again in a moment.</string>
     <string name="error_serialization">Failed to parse response</string>
     <string name="error_not_connected">No connection</string>
 </resources>

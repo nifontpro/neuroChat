@@ -33,4 +33,15 @@ internal class ChatRepository(private val client: OpenAiClient) : IChatRepositor
                 log.w(e) { "stream failed: $error" }
                 emit(Result.Failure(error))
             }
+
+    override suspend fun listModels(): Result<List<String>, DataError> = try {
+        Result.Success(client.listModels())
+    } catch (e: ApiException) {
+        log.w { "listModels failed: ${e.dataError}" }
+        Result.Failure(e.dataError)
+    } catch (e: Exception) {
+        val mapped = e.toDataError()
+        log.w(e) { "listModels failed: $mapped" }
+        Result.Failure(mapped)
+    }
 }

@@ -5,13 +5,14 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ChatMessageEntity::class],
-    version = 1,
+    entities = [ChatMessageEntity::class, BranchEntity::class],
+    version = 2,
 )
 @ConstructedBy(NeuroChatDatabaseConstructor::class)
 abstract class NeuroChatDatabase : RoomDatabase() {
 
     abstract fun chatMessageDao(): ChatMessageDao
+    abstract fun branchDao(): BranchDao
 
     companion object {
         const val DB_NAME = "neurochat.db"

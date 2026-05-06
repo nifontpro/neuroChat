@@ -14,6 +14,7 @@ import ru.nb.neurochat.chat.presentation.generated.resources.error_service_unava
 import ru.nb.neurochat.chat.presentation.generated.resources.error_too_many_requests
 import ru.nb.neurochat.chat.presentation.generated.resources.error_unauthorized
 import ru.nb.neurochat.chat.presentation.generated.resources.error_unknown
+import ru.nb.neurochat.chat.presentation.generated.resources.error_upstream_down
 import ru.nb.neurochat.domain.util.DataError
 
 internal fun DataError.toMessageRes(): StringResource = when (this) {
@@ -26,6 +27,7 @@ internal fun DataError.toMessageRes(): StringResource = when (this) {
     DataError.Remote.NO_INTERNET -> Res.string.error_no_internet
     DataError.Remote.SERVER_ERROR -> Res.string.error_server
     DataError.Remote.SERVICE_UNAVAILABLE -> Res.string.error_service_unavailable
+    DataError.Remote.UPSTREAM_DOWN -> Res.string.error_upstream_down
     DataError.Remote.SERIALIZATION -> Res.string.error_serialization
     DataError.Remote.UNKNOWN -> Res.string.error_unknown
     DataError.Connection.NOT_CONNECTED -> Res.string.error_not_connected

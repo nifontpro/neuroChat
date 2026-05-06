@@ -7,10 +7,12 @@ import ru.nb.neurochat.chat.presentation.DEFAULT_THINKING_BUDGET_TOKENS
 import ru.nb.neurochat.domain.model.ApiSettings
 import ru.nb.neurochat.domain.usecase.BuildChatContextUseCase
 import ru.nb.neurochat.domain.usecase.HandleCommandUseCase
+import ru.nb.neurochat.domain.usecase.UpdateFactsUseCase
 
 fun chatModule(settings: ApiSettings) = module {
     single { HandleCommandUseCase(defaultThinkingBudget = DEFAULT_THINKING_BUDGET_TOKENS) }
     single { BuildChatContextUseCase() }
+    single { UpdateFactsUseCase(get()) }
 
     viewModel {
         ChatViewModel(
@@ -21,6 +23,7 @@ fun chatModule(settings: ApiSettings) = module {
             historyDataSource = get(),
             handleCommand = get(),
             buildChatContext = get(),
+            updateFacts = get(),
         )
     }
 }

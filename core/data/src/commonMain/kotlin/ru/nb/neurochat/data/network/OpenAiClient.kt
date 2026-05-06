@@ -6,6 +6,7 @@ import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.preparePost
 import io.ktor.client.request.setBody
@@ -24,6 +25,7 @@ import ru.nb.neurochat.data.model.ChatCompletionResponse
 import ru.nb.neurochat.data.model.ChatRequest
 import ru.nb.neurochat.data.model.ChatStreamChunk
 import ru.nb.neurochat.data.model.MessageDto
+import ru.nb.neurochat.data.model.ModelsListResponse
 import ru.nb.neurochat.data.model.StreamErrorChunk
 import ru.nb.neurochat.data.model.StreamOptions
 import ru.nb.neurochat.data.model.ThinkingConfig
@@ -70,6 +72,28 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
             }
         }
         expectSuccess = false
+    }
+
+    /**
+     * GET /models — список доступных моделей у текущего провайдера (OpenAI-совместимый ответ).
+     * Бросает [ApiException] при HTTP-ошибке.
+     */
+    suspend fun listModels(): List<String> {
+        val response = client.get("${baseSettings.baseUrl}/models")
+        if (!response.status.isSuccess()) {
+            val body = response.bodyAsText()
+            log.w { "GET /models HTTP ${response.status.value}: ${body.take(200)}" }
+            throw ApiException(
+                dataError = response.status.toDataError(),
+                providerMessage = body.take(500).takeIf { it.isNotBlank() },
+            )
+        }
+        val text = response.bodyAsText()
+        return json.decodeFromString<ModelsListResponse>(text)
+            .data
+            .map { it.id }
+            .filter { it.isNotBlank() }
+            .sorted()
     }
 
     /**
@@ -144,8 +168,11 @@ internal class OpenAiClient(private val baseSettings: ApiSettings) {
 
         val error = decodeOrNull<StreamErrorChunk>(body, "non-stream error")?.error
         if (error != null) {
+            // HTTP 200 + JSON `{"error":...}` без `choices` — провайдер вернул валидационную
+            // ошибку (модель не найдена, неверный параметр и т.п.). Это семантика 4xx,
+            // мапим в BAD_REQUEST, а не UNKNOWN.
             throw ApiException(
-                dataError = DataError.Remote.UNKNOWN,
+                dataError = DataError.Remote.BAD_REQUEST,
                 providerMessage = error.message,
             )
         }

@@ -11,6 +11,7 @@ sealed interface DataError : Error {
         NO_INTERNET,
         SERVER_ERROR,
         SERVICE_UNAVAILABLE,
+        UPSTREAM_DOWN,
         SERIALIZATION,
         UNKNOWN
     }
