@@ -67,7 +67,7 @@
     <string name="cmd_think_on">Режим thinking включён (budget: %1$s токенов)</string>
     <string name="cmd_think_off">Режим thinking выключён</string>
     <string name="cmd_think_hint">Используй: /think on | /think off</string>
-    <string name="cmd_help">Команды:\n/system &lt;текст&gt; — задать системный промпт (без аргумента — сброс)\n/t &lt;0.0-2.0&gt; — температура\n/think on|off — режим расширенного мышления\n/compact — сжать историю в сводку\n/strategy &lt;window|facts|branching&gt; — стратегия контекста\n/branch &lt;имя&gt; — создать ветку от текущего места\n/branches — список веток\n/switch &lt;id|имя&gt; — переключиться на ветку\n/? — справка</string>
+    <string name="cmd_help">Команды:\n/system &lt;текст&gt; — задать системный промпт (без аргумента — сброс)\n/t &lt;0.0-2.0&gt; — температура\n/think on|off — режим расширенного мышления\n/compact — сжать историю в сводку\n/clear — очистить историю текущей ветки\n/strategy &lt;window|facts|branching&gt; — стратегия контекста\n/branch &lt;имя&gt; — создать ветку от текущего места\n/branches — список веток\n/switch &lt;id|имя&gt; — переключиться на ветку\n/? — справка</string>
     <string name="cmd_strategy_set">Стратегия контекста: %1$s</string>
     <string name="cmd_strategy_hint">Используй: /strategy &lt;window|facts|branching&gt;</string>
     <string name="cmd_branch_hint">Используй: /branch &lt;имя-новой-ветки&gt;</string>

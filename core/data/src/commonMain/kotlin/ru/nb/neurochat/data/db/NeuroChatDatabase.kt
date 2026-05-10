@@ -6,7 +6,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [ChatMessageEntity::class, BranchEntity::class],
-    version = 2,
+    version = 3,
 )
 @ConstructedBy(NeuroChatDatabaseConstructor::class)
 abstract class NeuroChatDatabase : RoomDatabase() {

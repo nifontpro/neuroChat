@@ -1,0 +1,1 @@
+- [Ссылочная модель ветвления (v3)](project_branching_model.md) — инварианты forkFromMessageId, баг null-cutoff, паттерн транзакций Room 2.7 KMP

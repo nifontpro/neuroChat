@@ -17,18 +17,21 @@ internal fun ChatMessageEntity.toChatMessage(): ChatMessage = ChatMessage(
     } else null,
 )
 
-internal fun ChatMessage.toEntity(branchId: Long): ChatMessageEntity = ChatMessageEntity(
-    branchId = branchId,
-    role = role.value,
-    content = content,
-    durationMs = statistics?.durationMs,
-    tokenCount = statistics?.tokenCount,
-    charCount = statistics?.charCount,
-)
+internal fun ChatMessage.toEntity(branchId: Long, createdAt: Long): ChatMessageEntity =
+    ChatMessageEntity(
+        branchId = branchId,
+        role = role.value,
+        content = content,
+        createdAt = createdAt,
+        durationMs = statistics?.durationMs,
+        tokenCount = statistics?.tokenCount,
+        charCount = statistics?.charCount,
+    )
 
 internal fun BranchEntity.toBranch(): Branch = Branch(
     id = id,
     name = name,
     parentBranchId = parentBranchId,
+    forkFromMessageId = forkFromMessageId,
     createdAt = createdAt,
 )

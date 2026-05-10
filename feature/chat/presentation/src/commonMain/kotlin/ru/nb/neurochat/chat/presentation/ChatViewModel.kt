@@ -40,6 +40,7 @@ import ru.nb.neurochat.data.preferences.UserSettingsStorage
 import ru.nb.neurochat.domain.datasource.IChatHistoryDataSource
 import ru.nb.neurochat.domain.datasource.IChatHistoryDataSource.Companion.MAIN_BRANCH_ID
 import ru.nb.neurochat.domain.model.ApiSettings
+import ru.nb.neurochat.domain.model.Branch
 import ru.nb.neurochat.domain.model.ChatMessage
 import ru.nb.neurochat.domain.model.ChatRole
 import ru.nb.neurochat.domain.model.ContextStrategy
@@ -98,9 +99,7 @@ class ChatViewModel(
     val state = _state
         .onStart {
             observeConnectivity()
-            initBranches()
-            loadSavedSettings()
-            loadHistory()
+            viewModelScope.launch { initialize() }
             loadAvailableModels()
         }
         .stateIn(
@@ -135,25 +134,29 @@ class ChatViewModel(
         }
     }
 
-    private fun initBranches() {
-        viewModelScope.launch {
-            historyDataSource.ensureMainBranch()
-            val branches = historyDataSource.getBranches()
-            _state.update { it.copy(branches = branches) }
-        }
-    }
+    /**
+     * Последовательная инициализация при первой подписке на [state].
+     *
+     * Раньше initBranches / loadSavedSettings / loadHistory запускались тремя
+     * независимыми viewModelScope.launch и гонялись между собой. Из-за этого после
+     * destructive-миграции БД могло прочитаться stale-значение currentBranchId из
+     * DataStore (от ранее существовавшей ветки), а ветки в state ещё не успевали
+     * загрузиться, чтобы это значение можно было провалидировать. Сообщения при
+     * sendMessage уходили в несуществующий branchId — нарушение инварианта.
+     *
+     * Здесь шаги выстроены строго по зависимостям: ветки → настройки (с валидацией
+     * currentBranchId через уже загруженный список) → история по подтверждённой
+     * ветке.
+     */
+    private suspend fun initialize() {
+        // 1. Ветки: гарантируем main и читаем актуальный список
+        historyDataSource.ensureMainBranch()
+        val branches = historyDataSource.getBranches()
+        _state.update { it.copy(branches = branches) }
 
-    private fun loadHistory() {
-        viewModelScope.launch {
-            val branchId = _state.value.currentBranchId
-            val messages = historyDataSource.getMessages(branchId)
-            _state.update { it.copy(messages = messages) }
-        }
-    }
-
-    private fun loadSavedSettings() {
-        viewModelScope.launch {
-            val saved = settingsStorage.load() ?: return@launch
+        // 2. Сохранённые настройки (включая валидацию ссылок на ветку)
+        val saved = settingsStorage.load()
+        if (saved != null) {
             saved.model?.let { selectModel(it) }
             saved.temperature?.let { updateTemperature(it) }
             saved.thinkingEnabled?.let { toggleThinking(it) }
@@ -161,10 +164,38 @@ class ChatViewModel(
             saved.maxContextMessages?.let { updateMaxContext(it) }
             saved.showStatistics?.let { toggleStatistics(it) }
             saved.maxTokens?.let { updateMaxTokens(it) }
-            saved.conversationSummary?.let { _state.update { s -> s.copy(conversationSummary = it) } }
+            saved.conversationSummary?.let {
+                _state.update { s -> s.copy(conversationSummary = it) }
+            }
             _state.update { it.copy(contextStrategy = saved.contextStrategy) }
             saved.facts?.let { _state.update { s -> s.copy(facts = it) } }
-            saved.currentBranchId?.let { _state.update { s -> s.copy(currentBranchId = it) } }
+            resolveSavedBranchId(saved.currentBranchId, branches)
+        }
+
+        // 3. История по уже подтверждённой ветке
+        val branchId = _state.value.currentBranchId
+        val messages = historyDataSource.getMessages(branchId)
+        _state.update { it.copy(messages = messages) }
+    }
+
+    /**
+     * Если сохранённый currentBranchId ссылается на ветку, которой больше нет
+     * (типичная ситуация — destructive migration Room при сохранённом DataStore),
+     * откатываемся на MAIN_BRANCH_ID и сразу перезаписываем DataStore, чтобы
+     * битая ссылка не воспроизвелась при следующем запуске.
+     */
+    private suspend fun resolveSavedBranchId(savedId: Long?, branches: List<Branch>) {
+        if (savedId == null) return
+        val exists = branches.any { it.id == savedId }
+        if (exists) {
+            _state.update { s -> s.copy(currentBranchId = savedId) }
+        } else {
+            log.w {
+                "saved currentBranchId=$savedId not found in branches " +
+                    "(${branches.map { it.id }}); falling back to MAIN_BRANCH_ID=$MAIN_BRANCH_ID"
+            }
+            settingsStorage.saveCurrentBranchId(MAIN_BRANCH_ID)
+            // currentBranchId в state уже = MAIN_BRANCH_ID по умолчанию — не трогаем
         }
     }
 
@@ -318,6 +349,7 @@ class ChatViewModel(
             CommandResult.Help -> postSystemMessage(getString(Res.string.cmd_help))
             CommandResult.UnknownCommand -> postSystemMessage(getString(Res.string.cmd_unknown))
             CommandResult.CompactRequested -> compactHistory()
+            CommandResult.ClearRequested -> clearHistory()
             is CommandResult.StrategyChanged -> {
                 changeContextStrategy(result.strategy)
                 postSystemMessage(getString(Res.string.cmd_strategy_set, result.strategy.key))

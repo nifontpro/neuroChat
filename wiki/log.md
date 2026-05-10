@@ -10,6 +10,49 @@ grep "^## \[" wiki/log.md | tail -10
 
 ---
 
+## [2026-05-10] impl | Slash-команда /clear
+- domain: HandleCommandUseCase — кейс "/clear" → CommandResult.ClearRequested
+- presentation: ChatViewModel.applyCommand — ClearRequested → clearHistory() (та же ветка, что и кнопка TopBar)
+- res: cmd_help (en+ru) дополнен строкой "/clear — очистить историю текущей ветки"
+- notes: BUILD SUCCESSFUL desktop/Android/iOS, тесты domain зелёные
+
+## [2026-05-10] fix | Гонки инициализации ChatViewModel + stale currentBranchId
+- root cause бага «после ветвления сообщения main исчезли»: после destructive-миграции Room на v3 в DataStore оставался currentBranchId=2 от прошлой инкарнации БД; loadSavedSettings и initBranches в onStart запускались параллельно через viewModelScope.launch, валидации не было — saveMessage уходил в несуществующую ветку
+- presentation: ChatViewModel — три параллельных launch заменены на одну suspend initialize(): ensureMainBranch+getBranches → load settings (с проверкой savedBranchId через свежий список) → loadHistory; при невалидном id фоллбек на MAIN_BRANCH_ID + перезапись DataStore
+- domain: IChatHistoryDataSource.findBranch(id): Branch?
+- data: RoomChatHistoryDataSource.saveMessage — проверка существования branchId через branchDao.findById; при отсутствии log.e + return (защита инварианта от потери данных)
+- notes: класс багов «сообщение записано в несуществующую ветку» теперь невозможен
+
+## [2026-05-10] refactor | Ветвление: ссылочная модель вместо физического копирования
+- идея: вместо клонирования всех сообщений родителя при createBranchFrom хранить только указатель parentBranchId + cutoff (forkFromMessageId)
+- domain: Branch.forkFromMessageId: Long? (>0 cutoff, 0 пустой родитель в момент fork, null root)
+- data: ChatMessageEntity.createdAt: Long + индекс — глобальный хронологический ключ для корректной сортировки после материализации
+- data: BranchEntity.forkFromMessageId + индекс по parentBranchId
+- data: ChatMessageDao — getAll сортирует по createdAt ASC, id ASC; +getUpTo(branchId, maxId), +maxOwnId(branchId)
+- data: BranchDao — +findChildren(parentId)
+- data: NeuroChatDatabase version 2 → 3 (destructive миграция уже была настроена в DataModule)
+- data: RoomChatHistoryDataSource полностью переписан:
+  - createBranchFrom без копирования; forkPoint = maxOwnId(parent.id) ?: 0L (явный 0 при пустом родителе — иначе cutoff=null интерпретируется как «брать всё»)
+  - getMessages — buildAncestorChainTopDown собирает цепочку предков с защитой от циклов; для каждого звена getUpTo по cutoff; результат сортируется по (createdAt, id)
+  - clearAll и deleteBranch обёрнуты в database.useWriterConnection { transactor.immediateTransaction { ... } }; при наличии потомков materializeFromParentInto — копирует видимую часть в потомка и перепривязывает его к деду
+  - clearAll дополнительно отвязывает ветку от предка (parentBranchId=null, forkFromMessageId=null), чтобы /clear скрыл и унаследованную историю
+- IChatHistoryDataSource — сигнатуры не менялись: VM и UI не затронуты
+- ревью kmp-code-reviewer нашёл и исправил: cutoff=null при пустом родителе (теперь ?: 0L), отсутствие транзакций в clearAll/deleteBranch
+- notes: BUILD SUCCESSFUL desktop/Android/iOS, тесты domain зелёные
+
+## [2026-05-06] session-end | Конец дня после Л10 + переезд на rus-gpt
+- последнее задание: Л10 (3 стратегии управления контекстом) — реализовано полностью
+- сделано в сессии:
+  - impl Л10: ContextStrategy {SLIDING_WINDOW, STICKY_FACTS, BRANCHING} + переключатель + slash-команды
+  - fix Compose Desktop exit 137 (OOM) — jvmArgs + gradle daemon heap; ключевой шаг ./gradlew --stop
+  - fix Cloudflare 52x → DataError.Remote.UPSTREAM_DOWN с человекочитаемым сообщением
+  - переезд на rus-gpt: новый baseUrl/apiKey/default model + GET /v1/models с динамической загрузкой 38 моделей
+  - fix stale-модели в DataStore (sanitizeCurrentModel) + non-stream error JSON → BAD_REQUEST
+  - quiet ConnectivityObserver desktop — лог только при смене состояния, не каждые 5 сек
+- следующие задания: Л3, Л5 — ещё не обрабатывались
+- обсудили (без реализации): tool calling, чем агенты типа Claude Code похожи/отличаются, MCP-протокол; решено: tools/MCP — это отдельный большой заход, не сегодня
+- notes: BUILD SUCCESSFUL desktop/Android/iOS, тесты domain зелёные
+
 ## [2026-05-06] fix | Stale модель из DataStore + правильный маппинг non-stream error
 - presentation: ChatViewModel.sanitizeCurrentModel() — после загрузки availableModels проверяет, что текущая модель в списке; иначе переключает на baseSettings.model или на первую из списка
 - data: OpenAiClient.handleNonStreamingResponse — JSON `{"error":...}` при HTTP 200 теперь мапится в BAD_REQUEST (а не UNKNOWN), сохраняя providerMessage

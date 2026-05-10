@@ -14,6 +14,9 @@ interface BranchDao {
     @Query("SELECT * FROM branches WHERE id = :id LIMIT 1")
     suspend fun findById(id: Long): BranchEntity?
 
+    @Query("SELECT * FROM branches WHERE parentBranchId = :parentId")
+    suspend fun findChildren(parentId: Long): List<BranchEntity>
+
     @Insert
     suspend fun insert(entity: BranchEntity): Long
 

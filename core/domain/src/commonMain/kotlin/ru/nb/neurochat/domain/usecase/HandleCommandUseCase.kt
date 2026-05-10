@@ -20,6 +20,7 @@ class HandleCommandUseCase(
             "/t" -> handleTemperature(arg, settings)
             "/think" -> handleThinking(arg, settings)
             "/compact" -> CommandResult.CompactRequested
+            "/clear" -> CommandResult.ClearRequested
             "/strategy" -> handleStrategy(arg)
             "/branch" -> handleBranch(arg)
             "/branches" -> CommandResult.BranchesListRequested
@@ -109,4 +110,5 @@ sealed interface CommandResult {
     data object Help : CommandResult
     data object UnknownCommand : CommandResult
     data object CompactRequested : CommandResult
+    data object ClearRequested : CommandResult
 }

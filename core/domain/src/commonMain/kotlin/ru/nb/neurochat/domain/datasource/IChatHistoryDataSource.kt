@@ -9,6 +9,7 @@ interface IChatHistoryDataSource {
     suspend fun clearAll(branchId: Long)
 
     suspend fun getBranches(): List<Branch>
+    suspend fun findBranch(id: Long): Branch?
     suspend fun ensureMainBranch(): Branch
     suspend fun createBranchFrom(parent: Branch, newName: String): Branch
     suspend fun renameBranch(branchId: Long, newName: String)

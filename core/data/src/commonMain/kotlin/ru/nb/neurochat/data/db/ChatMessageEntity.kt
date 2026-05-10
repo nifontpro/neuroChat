@@ -6,13 +6,17 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "messages",
-    indices = [Index(value = ["branchId"])],
+    indices = [
+        Index(value = ["branchId"]),
+        Index(value = ["createdAt"]),
+    ],
 )
 data class ChatMessageEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val branchId: Long,
     val role: String,
     val content: String,
+    val createdAt: Long,
     val durationMs: Long?,
     val tokenCount: Int?,
     val charCount: Int?,

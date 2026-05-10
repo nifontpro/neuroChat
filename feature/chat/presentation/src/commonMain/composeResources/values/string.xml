@@ -67,7 +67,7 @@
     <string name="cmd_think_on">Thinking mode enabled (budget: %1$s tokens)</string>
     <string name="cmd_think_off">Thinking mode disabled</string>
     <string name="cmd_think_hint">Usage: /think on | /think off</string>
-    <string name="cmd_help">Commands:\n/system &lt;text&gt; — set system prompt (no arg — reset)\n/t &lt;0.0-2.0&gt; — temperature\n/think on|off — extended thinking mode\n/compact — summarize and compress history\n/strategy &lt;window|facts|branching&gt; — set context strategy\n/branch &lt;name&gt; — fork new branch from current point\n/branches — list branches\n/switch &lt;id|name&gt; — switch to branch\n/? — help</string>
+    <string name="cmd_help">Commands:\n/system &lt;text&gt; — set system prompt (no arg — reset)\n/t &lt;0.0-2.0&gt; — temperature\n/think on|off — extended thinking mode\n/compact — summarize and compress history\n/clear — clear current branch history\n/strategy &lt;window|facts|branching&gt; — set context strategy\n/branch &lt;name&gt; — fork new branch from current point\n/branches — list branches\n/switch &lt;id|name&gt; — switch to branch\n/? — help</string>
     <string name="cmd_strategy_set">Context strategy: %1$s</string>
     <string name="cmd_strategy_hint">Usage: /strategy &lt;window|facts|branching&gt;</string>
     <string name="cmd_branch_hint">Usage: /branch &lt;new-branch-name&gt;</string>
